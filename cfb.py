@@ -1,6 +1,6 @@
 from random import choice, randint, shuffle
 
-class team:
+class Team:
     name: str
     reg_wins: int = 0
     reg_losses: int = 0
@@ -12,6 +12,16 @@ class team:
 
     def __init__(self, n) -> None:
         self.name = n
+
+    def handle_win(self, points) -> None:
+        self.reg_wins += 1
+        self.total_wins += 1
+        self.point_diff += points
+
+    def handle_loss(self, points) -> None:
+        self.reg_losses += 1
+        self.total_losses += 1
+        self.point_diff -= points
     
     def get_rank_difference(self) -> str:
         if self.rank == "UR":
@@ -21,7 +31,7 @@ class team:
             return "~ "
         
         if self.prev_rank == "UR":
-            return "NR"
+            return "UR"
 
         r = int(self.rank)
         pr = int(self.prev_rank)
@@ -29,10 +39,10 @@ class team:
             return str(f"-{r-pr}")
         return str(f"+{pr-r}")
 
-class conference:
+class Conference:
     name: str
-    div1: list[team]
-    div2: list[team]
+    div1: list[Team]
+    div2: list[Team]
     div1_name: str
     div2_name: str
 
@@ -43,112 +53,112 @@ class conference:
         self.div1_name = dn1
         self.div2_name = dn2
 
-class cfb:
-    conferences: list[conference]
-    team_ranks: list[team] = []
+class CFB:
+    conferences: list[Conference]
+    team_ranks: list[Team] = []
 
     def set_up_season(self):
         cons = []
 
-        sec_east: list[team] = []
-        sec_east.append(team("Tennessee"))
-        sec_east.append(team("Georgia"))
-        sec_east.append(team("Florida"))
-        sec_east.append(team("Kentucky"))
-        sec_east.append(team("South Carolina"))
-        sec_east.append(team("Missouri"))
-        sec_east.append(team("Vanderbilt"))
+        sec_east: list[Team] = []
+        sec_east.append(Team("Tennessee"))
+        sec_east.append(Team("Georgia"))
+        sec_east.append(Team("Florida"))
+        sec_east.append(Team("Kentucky"))
+        sec_east.append(Team("South Carolina"))
+        sec_east.append(Team("Missouri"))
+        sec_east.append(Team("Vanderbilt"))
 
-        sec_west: list[team] = []
-        sec_west.append(team("Alabama"))
-        sec_west.append(team("Ole Miss"))
-        sec_west.append(team("LSU"))
-        sec_west.append(team("Mississippi State"))
-        sec_west.append(team("Texas A&M"))
-        sec_west.append(team("Auburn"))
-        sec_west.append(team("Arkansas"))
+        sec_west: list[Team] = []
+        sec_west.append(Team("Alabama"))
+        sec_west.append(Team("Ole Miss"))
+        sec_west.append(Team("LSU"))
+        sec_west.append(Team("Mississippi State"))
+        sec_west.append(Team("Texas A&M"))
+        sec_west.append(Team("Auburn"))
+        sec_west.append(Team("Arkansas"))
 
-        cons.append(conference("SEC", sec_east, sec_west, "East", "West"))
+        cons.append(Conference("SEC", sec_east, sec_west, "East", "West"))
 
         acc_at = []
-        acc_at.append(team("Clemson"))
-        acc_at.append(team("Florida State"))
-        acc_at.append(team("NC State"))
-        acc_at.append(team("Syracuse"))
-        acc_at.append(team("Louisville"))
-        acc_at.append(team("Wake Forest"))
-        acc_at.append(team("Boston College"))
+        acc_at.append(Team("Clemson"))
+        acc_at.append(Team("Florida State"))
+        acc_at.append(Team("NC State"))
+        acc_at.append(Team("Syracuse"))
+        acc_at.append(Team("Louisville"))
+        acc_at.append(Team("Wake Forest"))
+        acc_at.append(Team("Boston College"))
 
         acc_co = []
-        acc_co.append(team("North Carolina"))
-        acc_co.append(team("Duke"))
-        acc_co.append(team("Pitt"))
-        acc_co.append(team("Miami"))
-        acc_co.append(team("Georgia Tech"))
-        acc_co.append(team("Virginia"))
-        acc_co.append(team("Virginia Tech"))
+        acc_co.append(Team("North Carolina"))
+        acc_co.append(Team("Duke"))
+        acc_co.append(Team("Pitt"))
+        acc_co.append(Team("Miami"))
+        acc_co.append(Team("Georgia Tech"))
+        acc_co.append(Team("Virginia"))
+        acc_co.append(Team("Virginia Tech"))
 
-        cons.append(conference("ACC", acc_at, acc_co, "Atlantic", "Costal"))
+        cons.append(Conference("ACC", acc_at, acc_co, "Atlantic", "Costal"))
 
         big10_east = []
-        big10_east.append(team("Michigan"))
-        big10_east.append(team("Ohio State"))
-        big10_east.append(team("Penn State"))
-        big10_east.append(team("Maryland"))
-        big10_east.append(team("Michigan State"))
-        big10_east.append(team("Rutgers"))
-        big10_east.append(team("Indiana"))
+        big10_east.append(Team("Michigan"))
+        big10_east.append(Team("Ohio State"))
+        big10_east.append(Team("Penn State"))
+        big10_east.append(Team("Maryland"))
+        big10_east.append(Team("Michigan State"))
+        big10_east.append(Team("Rutgers"))
+        big10_east.append(Team("Indiana"))
 
         big10_west = []
-        big10_west.append(team("Illinois"))
-        big10_west.append(team("Iowa"))
-        big10_west.append(team("Purdue"))
-        big10_west.append(team("Minnesota"))
-        big10_west.append(team("Wisconsin"))
-        big10_west.append(team("Nebraska"))
-        big10_west.append(team("Northwestern"))
+        big10_west.append(Team("Illinois"))
+        big10_west.append(Team("Iowa"))
+        big10_west.append(Team("Purdue"))
+        big10_west.append(Team("Minnesota"))
+        big10_west.append(Team("Wisconsin"))
+        big10_west.append(Team("Nebraska"))
+        big10_west.append(Team("Northwestern"))
 
-        cons.append(conference("Big 10", big10_east, big10_west, "East", "West"))
+        cons.append(Conference("Big 10", big10_east, big10_west, "East", "West"))
 
         tot_east = []
-        tot_east.append(team("TCU"))
-        tot_east.append(team("Kansas"))
-        tot_east.append(team("Kansas State"))
-        tot_east.append(team("Notre Dame"))
-        tot_east.append(team("Frenso State"))
-        tot_east.append(team("UCLA"))
-        tot_east.append(team("Oregon"))
+        tot_east.append(Team("TCU"))
+        tot_east.append(Team("Kansas"))
+        tot_east.append(Team("Kansas State"))
+        tot_east.append(Team("Notre Dame"))
+        tot_east.append(Team("Frenso State"))
+        tot_east.append(Team("UCLA"))
+        tot_east.append(Team("Oregon"))
 
         tot_west = []
-        tot_west.append(team("Texas"))
-        tot_west.append(team("Oklahoma"))
-        tot_west.append(team("Baylor"))
-        tot_west.append(team("Liberty"))
-        tot_west.append(team("Boise State"))
-        tot_west.append(team("Arizona"))
-        tot_west.append(team("App State"))
+        tot_west.append(Team("Texas"))
+        tot_west.append(Team("Oklahoma"))
+        tot_west.append(Team("Baylor"))
+        tot_west.append(Team("Liberty"))
+        tot_west.append(Team("Boise State"))
+        tot_west.append(Team("Arizona"))
+        tot_west.append(Team("App State"))
 
-        cons.append(conference("OCT", tot_east, tot_west, "East", "West"))
+        cons.append(Conference("OCT", tot_east, tot_west, "East", "West"))
 
         fbs_east = []
-        fbs_east.append(team("Gardner Webb"))
-        fbs_east.append(team("Marshall"))
-        fbs_east.append(team("Wofford"))
-        fbs_east.append(team("UT Martin"))
-        fbs_east.append(team("East Carolina"))
-        fbs_east.append(team("Tulsa"))
-        fbs_east.append(team("BYU"))
+        fbs_east.append(Team("Gardner Webb"))
+        fbs_east.append(Team("Marshall"))
+        fbs_east.append(Team("Wofford"))
+        fbs_east.append(Team("UT Martin"))
+        fbs_east.append(Team("East Carolina"))
+        fbs_east.append(Team("Tulsa"))
+        fbs_east.append(Team("BYU"))
 
         fbs_west = []
-        fbs_west.append(team("Army"))
-        fbs_west.append(team("Air Force"))
-        fbs_west.append(team("Tulane"))
-        fbs_west.append(team("Navy"))
-        fbs_west.append(team("James Madison"))
-        fbs_west.append(team("Troy"))
-        fbs_west.append(team("Uconn"))
+        fbs_west.append(Team("Army"))
+        fbs_west.append(Team("Air Force"))
+        fbs_west.append(Team("Tulane"))
+        fbs_west.append(Team("Navy"))
+        fbs_west.append(Team("James Madison"))
+        fbs_west.append(Team("Troy"))
+        fbs_west.append(Team("Uconn"))
 
-        cons.append(conference("FBS", fbs_east, fbs_west, "East", "West"))
+        cons.append(Conference("FBS", fbs_east, fbs_west, "East", "West"))
 
         return cons
 
@@ -186,7 +196,7 @@ class cfb:
             for team in con.div2:
                 teams.append(team)
 
-        matches: list[list[teams]] = []
+        matches: list[list[Team]] = []
         
         #teams = self.team_ranks[:]
 
@@ -214,7 +224,7 @@ class cfb:
 
             box = home.reg_wins - away.reg_wins
             if box < 0:
-                temp: team = home
+                temp: Team = home
                 home = away
                 away = temp
                 box = abs(box)
@@ -312,7 +322,7 @@ class cfb:
 
             box = team1.reg_wins - team2.reg_wins
             if box <= 0:
-                temp: team = team2
+                temp: Team = team2
                 team2 = team1
                 team1 = temp
                 box = abs(box)
@@ -354,7 +364,7 @@ class cfb:
 
         box = team1.reg_wins - team2.reg_wins
         if box < 0:
-            temp: team = team2
+            temp: Team = team2
             team2 = team1
             team1 = temp
             box = abs(box)
@@ -379,7 +389,7 @@ class cfb:
 
         box = team3.reg_wins - team4.reg_wins
         if box < 0:
-            temp: team = team4
+            temp: Team = team4
             team4 = team3
             team3 = temp
             box = abs(box)
@@ -407,7 +417,7 @@ class cfb:
 
         box = team1.reg_wins - team2.reg_wins
         if box < 0:
-            temp: team = team2
+            temp: Team = team2
             team2 = team1
             team1 = temp
             box = abs(box)
@@ -465,7 +475,7 @@ class cfb:
 
             box = teams[octo[i][1]].reg_wins - teams[octo[i][0]].reg_wins
             if box < 0:
-                temp: team = teams[octo[i][0]]
+                temp: Team = teams[octo[i][0]]
                 teams[octo[i][0]] = teams[octo[i][1]]
                 teams[octo[i][1]] = temp
                 box = abs(box)
@@ -485,7 +495,7 @@ class cfb:
 
             box = teams[quarter[i][1]].reg_wins - teams[quarter[i][0]].reg_wins
             if box < 0:
-                temp: team = teams[quarter[i][0]]
+                temp: Team = teams[quarter[i][0]]
                 teams[quarter[i][0]] = teams[quarter[i][1]]
                 teams[quarter[i][1]] = temp
                 box = abs(box)
@@ -505,7 +515,7 @@ class cfb:
 
             box = teams[semi[i][1]].reg_wins - teams[semi[i][0]].reg_wins
             if box < 0:
-                temp: team = teams[semi[i][0]]
+                temp: Team = teams[semi[i][0]]
                 teams[semi[i][0]] = teams[semi[i][1]]
                 teams[semi[i][1]] = temp
                 box = abs(box)
@@ -524,7 +534,7 @@ class cfb:
 
         box = teams[final[1]].reg_wins - teams[final[0]].reg_wins
         if box < 0:
-            temp: team = teams[final[0]]
+            temp: Team = teams[final[0]]
             teams[final[0]] = teams[final[1]]
             teams[final[1]] = temp
             box = abs(box)
@@ -544,13 +554,11 @@ class cfb:
         for t in range(len(self.team_ranks)):
             print(f"{(t+1):>2}) {(self.team_ranks[t].name):<20} ({self.team_ranks[t].total_wins}-{self.team_ranks[t].total_losses}) {self.team_ranks[t].point_diff}")
 
-    def handle_regular_game(self, winner, loser, scores, print_stuff):
-        winner.reg_wins += 1
-        loser.reg_losses += 1
-        winner.total_wins += 1
-        loser.total_losses += 1
-        winner.point_diff += (scores[0]-scores[1])
-        loser.point_diff -= (scores[0]-scores[1])
+    def handle_regular_game(self, winner: Team, loser: Team, scores, print_stuff):
+        points_diff = scores[0] - scores[1]
+        winner.handle_win(points_diff)
+        loser.handle_loss(points_diff)
+
         if print_stuff:
             print(f"{winner.name} {scores[0]} - {scores[1]} {loser.name}  | {winner.name} wins!\n")
         #return winner, loser

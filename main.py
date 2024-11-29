@@ -1,7 +1,7 @@
 from cfb import *
 
 def main():
-    ncaa = cfb()
+    ncaa = CFB()
     ncaa.get_scores()
     ncaa.make_top25(0)
     input("")
