@@ -570,7 +570,7 @@ class CFB:
         #return winner, loser
 
     def menu_processor(self):
-        enter_counter = 1
+        enter_counter = 0
         while True:
             selection = input(
                 " (FR): See Full Rankings | (A): Advance Week \n"
@@ -578,11 +578,6 @@ class CFB:
                 " Selection: "
             )
             print("\n")
-            if selection.lower() == "a" or enter_counter >= 3:
-                print("\n")
-                return
-            if selection == "":
-                enter_counter += 1
             if selection.lower() == "fr":
                 self.print_full_rankings()
                 print("\n")
@@ -593,5 +588,14 @@ class CFB:
                     print("\n")
                 else:
                     print("next time enter a digit\n")
+
+            if selection == "":
+                enter_counter += 1
+            else:
+                enter_counter = 0
+                
+            if selection.lower() == "a" or enter_counter >= 3:
+                print("\n")
+                return
 
 
