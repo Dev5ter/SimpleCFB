@@ -1,17 +1,18 @@
 from random import choice, randint, shuffle
 
 class Team:
-    name: str
-    reg_wins: int = 0
-    reg_losses: int = 0
-    total_wins: int = 0
-    total_losses: int = 0
-    rank: str = "UR"
-    prev_rank: str = "UR"
-    point_diff = 0
 
     def __init__(self, n) -> None:
         self.name = n
+        self.reg_wins: int = 0
+        self.reg_losses: int = 0
+        self.total_wins: int = 0
+        self.total_losses: int = 0
+        self.rank: str = "UR"
+        self.prev_rank: str = "UR"
+        self.full_rank: str = 0
+        self.point_diff = 0
+        self.opponents: list[tuple[Team, bool]] = []
 
     def handle_win(self, points) -> None:
         self.reg_wins += 1
@@ -38,6 +39,12 @@ class Team:
         if r > pr:
             return str(f"-{r-pr}")
         return str(f"+{pr-r}")
+    
+    def print_team_details(self):
+        print(f"{self.name} ({self.total_wins}-{self.total_losses})")
+        print("Faced: ")
+        for op, win in self.opponents:
+            print(f"  - {'W' if win else 'L'} ({op.rank:>2}) {op.name} ({op.total_wins}-{op.total_losses})")
 
 class Conference:
     name: str
@@ -197,18 +204,14 @@ class CFB:
                 teams.append(team)
 
         matches: list[list[Team]] = []
-        
-        #teams = self.team_ranks[:]
 
         for _ in range(35):
 
-            home = choice(teams)
-            #home = teams[0]
+            home: Team = choice(teams)
             teams.remove(home)
-            away = choice(teams)
-            #away = teams[-1]
-            teams.remove(away)
 
+            away: Team = choice(teams)
+            teams.remove(away)
 
             matches.append([home, away])
 
@@ -234,8 +237,12 @@ class CFB:
             scores = self.get_scores()
             if win_home > 0:
                 self.handle_regular_game(home, away, scores, print_stuff)
+                home.opponents.append((away, True))
+                away.opponents.append((home, False))
             else:
                 self.handle_regular_game(away, home, scores, print_stuff)
+                away.opponents.append((home, True))
+                home.opponents.append((away, False))
 
     def sort_prime_time(self, game):
         #print(type(game), len(game), game)
@@ -282,10 +289,9 @@ class CFB:
 
         for t in range(len(self.team_ranks)):
             self.team_ranks[t].prev_rank = self.team_ranks[t].rank
-            if t < 25:
-                self.team_ranks[t].rank = str(t+1)
-            else:
-                self.team_ranks[t].rank = "UR"
+            self.team_ranks[t].full_rank = str(t+1)
+            self.team_ranks[t].rank = str(t+1) if t < 25 else "UR"
+
 
         print("{0:^54}".format("Top 25"))
         print("-----------------------------------------------------")
@@ -562,4 +568,34 @@ class CFB:
         if print_stuff:
             print(f"{winner.name} {scores[0]} - {scores[1]} {loser.name}  | {winner.name} wins!\n")
         #return winner, loser
+
+    def menu_processor(self):
+        enter_counter = 0
+        while True:
+            selection = input(
+                " (FR): See Full Rankings | (A): Advance Week \n"
+                " (TD): Team Details \n"
+                " Selection: "
+            )
+            print("\n")
+            if selection.lower() == "fr":
+                self.print_full_rankings()
+                print("\n")
+            if selection.lower() == "td":
+                tr = input("Enter the team's rank you want to see: ")
+                if tr.isdigit():
+                    self.team_ranks[int(tr)-1].print_team_details()
+                    print("\n")
+                else:
+                    print("next time enter a digit\n")
+
+            if selection == "":
+                enter_counter += 1
+            else:
+                enter_counter = 0
+                
+            if selection.lower() == "a" or enter_counter >= 3:
+                print("\n")
+                return
+
 

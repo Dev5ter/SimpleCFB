@@ -8,15 +8,14 @@ def main():
     ncaa.print_standings()
 
     for week in range(12):
+        ncaa.menu_processor()
         ncaa.play_week(print_stuff=True)
         input("")
         ncaa.make_top25(week+1)
         input("")
         ncaa.print_standings()
         input("")
-    ncaa.print_full_rankings()
-    print("")
-    input("")
+    ncaa.menu_processor()
     ncaa.conference_championships()
     input("")
 
