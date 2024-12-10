@@ -48,7 +48,7 @@ class Team:
         name_length = max([len(x.opponent.name) for x in self.opponents]) + 1
         for op_match in self.opponents:
             op = op_match.opponent
-            
+
             if op_match.is_conference_title:
                 print("\n---------------- Conference Championship -----------------------")
             if op_match.is_playoff_octo:
@@ -263,7 +263,7 @@ class CFB:
 
         matches: list[list[Team]] = []
 
-        for _ in range(35):
+        for _ in range(len(teams) // 2):
 
             home: Team = choice(teams)
             teams.remove(home)
@@ -368,13 +368,13 @@ class CFB:
         self.team_ranks.sort(key = lambda x: x.calc_cfb_points(), reverse=True)
 
         for i in range(len(self.team_ranks)-1):
-            for op_match in self.team_ranks[i].opponents[:-1]:
+            for op_match in self.team_ranks[i].opponents[::-1]:
                 if not op_match.win and self.team_ranks[i+1] == op_match.opponent:
                     # print(f"SWITCH: {self.team_ranks[i].name}")
                     temp: OpponentMatch = self.team_ranks[i+1]
                     self.team_ranks[i+1] = self.team_ranks[i]
                     self.team_ranks[i] = temp
-                    continue
+                    break
 
         for t in range(len(self.team_ranks)):
             self.team_ranks[t].full_rank = str(t+1)
@@ -533,7 +533,7 @@ class CFB:
             teams[quarter[i][winner]].total_wins += 1
             teams[quarter[i][winner]].opponents.append(OpponentMatch(teams[quarter[i][loser]], True, scores[0]-scores[1], po_quarter=True))
             teams[quarter[i][loser]].total_losses += 1
-            teams[quarter[i][loser]].opponents.append(OpponentMatch(teams[quarter[i][loser]], False, scores[1]-scores[0], po_quarter=True))
+            teams[quarter[i][loser]].opponents.append(OpponentMatch(teams[quarter[i][winner]], False, scores[1]-scores[0], po_quarter=True))
 
             print(f"{teams[quarter[i][winner]].name} {scores[0]} - {scores[1]} {teams[quarter[i][loser]].name} | {teams[quarter[i][winner]].name} wins!!!\n")
 
@@ -577,7 +577,7 @@ class CFB:
 
     def print_full_rankings(self):
         for t in range(len(self.team_ranks)):
-            print(f"{(t+1):>2}) {(self.team_ranks[t].name):<20} ({self.team_ranks[t].total_wins}-{self.team_ranks[t].total_losses}) {self.team_ranks[t].point_diff}")
+            print(f"{(t+1):>2}) {(self.team_ranks[t].name):<20} ({self.team_ranks[t].total_wins}-{self.team_ranks[t].total_losses}) {self.team_ranks[t].point_diff if self.rank_sig == 'AP' else self.team_ranks[t].cfb_points}")
 
     def handle_regular_game(self, winner: Team, loser: Team, scores, print_stuff):
         points_diff = scores[0] - scores[1]
