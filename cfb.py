@@ -593,7 +593,7 @@ class CFB:
         while True:
             selection = input(
                 " (FR): See Full Rankings | (A): Advance Week \n"
-                " (TD): Team Details \n"
+                " (TD): Team Details | (S): Save Season | (L): Load Season \n"
                 " Selection: "
             )
             print("\n")
