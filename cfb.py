@@ -1,5 +1,3 @@
-import pickle
-
 from random import choice, randint, shuffle
 from typing import Union
 
@@ -613,10 +611,10 @@ class CFB:
             )
 
             print("\n")
-            if selection.lower() == "s":
+            if selection.lower() == "s" and allow_save_load:
                 self.save_season()
                 print("\n")
-            if selection.lower() == "l":
+            if selection.lower() == "l" and allow_save_load:
                 self.load_season()
                 print("\n")
             if selection.lower() == "st":
@@ -762,7 +760,6 @@ class CFB:
                 opponents = []
                 for _ in range(self.week - 1):
                     op_data = file.readline().split(',')[:-1]
-                    print(op_data)
                     opponents.append(
                         OpponentMatch(
                             op=op_data[0],
@@ -791,7 +788,7 @@ class CFB:
         
 
         # re rank to match saved status
-        self.make_ap_top25() if self.rank_sig == "AP" else self.team_ranks.sort(key=lambda x: x.cfb_points, reverse=True)
+        self.team_ranks.sort(key=lambda x: int(x.full_rank)) if self.rank_sig == "AP" else self.team_ranks.sort(key=lambda x: x.cfb_points, reverse=True)
 
     def return_team_by_name(self, name: str):
         teams = [x for x in self.team_ranks if x.name == name]
