@@ -788,7 +788,9 @@ class CFB:
         
 
         # re rank to match saved status
-        self.team_ranks.sort(key=lambda x: int(x.full_rank)) if self.rank_sig == "AP" else self.team_ranks.sort(key=lambda x: x.cfb_points, reverse=True)
+        self.team_ranks.sort(key=lambda x: int(x.full_rank))
+
+        print("Loading Successful!\n")
 
     def return_team_by_name(self, name: str):
         teams = [x for x in self.team_ranks if x.name == name]
