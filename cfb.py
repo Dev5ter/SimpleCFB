@@ -12,8 +12,10 @@ class Team:
         self.rank: str = "UR"
         self.prev_rank: str = "UR"
         self.full_rank: str = 0
+        self.cfp_seed: str = "OUT"
         self.point_diff = 0
         self.cfb_points = 0
+        self.is_con_champion: bool = False
         self.opponents: list[OpponentMatch] = []
 
     def handle_win(self, points) -> None:
@@ -617,6 +619,10 @@ class CFB:
             if selection.lower() == "l" and allow_save_load:
                 self.load_season()
                 print("\n")
+            if selection.lower() == "b":
+                cfp = self.get_cfp_12_teams(is_after_con_championships=False)
+                self.view_bracket(cfp)
+                print("\n")
             if selection.lower() == "st":
                 self.print_top25()
                 print("\n")
@@ -799,3 +805,36 @@ class CFB:
         else:
             return teams[0]
 
+    def get_cfp_12_teams(self, is_after_con_championships: bool = True) -> list[Team]:
+        cfp_teams = []
+
+        if is_after_con_championships: 
+            self.team_ranks.sort(key=lambda x: (x.is_con_champion, int(x.full_rank)))
+            cfp_teams = self.team_ranks[:12]
+        else:
+            for con in self.conferences:
+                teams = []
+                for d1 in con.div1:
+                    teams.append(d1)
+                for d2 in con.div2:
+                    teams.append(d2)
+
+                teams.sort(key=lambda x: int(x.full_rank))
+                cfp_teams.append(teams[0])
+            index = 0
+            while len(cfp_teams) < 12:
+                if self.team_ranks[index] not in cfp_teams:
+                    cfp_teams.append(self.team_ranks[index])
+
+                index += 1
+        
+        cfp_teams.sort(key=lambda x: int(x.full_rank))
+        for team_seed in range(1, 13):
+            cfp_teams[team_seed-1].cfp_seed = team_seed
+
+        return cfp_teams
+    
+    def view_bracket(self, cfp_teams: list[Team]):
+        for cfp_team in cfp_teams:
+            print(f"Seed {cfp_team.cfp_seed}: {cfp_team.name} ({cfp_team.full_rank})")
+        
