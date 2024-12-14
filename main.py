@@ -3,6 +3,7 @@ from cfb import *
 def main():
     ncaa = CFB()
     ncaa.make_ap_top25()
+    ncaa.menu_processor()
     ncaa.print_top25()
     input("")
     ncaa.print_standings()
