@@ -12,10 +12,10 @@ class Team:
         self.rank: str = "UR"
         self.prev_rank: str = "UR"
         self.full_rank: str = 0
-        self.cfp_seed: str = "OUT"
+        self.cfp_seed: str = "OUT" # Add Load/Save
         self.point_diff = 0
         self.cfb_points = 0
-        self.is_con_champion: bool = False
+        self.is_con_champion: bool = False # Add Load/Save
         self.opponents: list[OpponentMatch] = []
 
     def handle_win(self, points) -> None:
@@ -236,6 +236,7 @@ class CFB:
         self.team_ranks: list[Team] = []
         self.rank_sig: str = "NA"
         self.week: int = 1
+        self.is_after_conference_championship: bool = False
         self.weights = {
             1:  randint(8,12),
             2:  randint(18,22),
@@ -252,6 +253,23 @@ class CFB:
             13: randint(103,107),
             20: randint(108,112),
         }
+        self.octo = [
+            (7,8),
+            (4,11),
+            (6,9),
+            (5,10),
+        ]
+        self.quarter = [
+            [0,],
+            [3,],
+            [1,],
+            [2,],
+        ]
+        self.semi = [
+            [],
+            [],
+        ]
+        self.final = []
         self.SEASON_FOLDER = "saved_seasons"
 
     def get_scores(self):
@@ -409,6 +427,7 @@ class CFB:
             
             winner.total_wins += 1 
             winner.reg_wins += 1
+            winner.is_con_champion = True
             winner.opponents.append(OpponentMatch(loser, True, scores[0]-scores[1], True))
 
             loser.total_losses += 1
@@ -417,6 +436,7 @@ class CFB:
 
 
             input("\n")
+        self.is_after_conference_championship = True
     
     def playoffs_four(self):
         teams = []
@@ -490,98 +510,86 @@ class CFB:
 
         teams = teams[:12]
 
-        octo = [
-            (7,8),
-            (5,10),
-            (4,11),
-            (6,9),
-        ]
-        quarter = [
-            [0,],
-            [2,],
-            [3,],
-            [1,],
-        ]
-        semi = [
-            [],
-            [],
-        ]
-        final = []
-
         # Octo Matches
         for i in range(4):
-            input(f"CFB Championship Octo Round {i+1}: {teams[octo[i][0]].rank} {teams[octo[i][0]].name} ({teams[octo[i][0]].total_wins}-{teams[octo[i][0]].total_losses}) vs {teams[octo[i][1]].rank} {teams[octo[i][1]].name} ({teams[octo[i][1]].total_wins}-{teams[octo[i][1]].total_losses})")
+            input(f"CFB Championship Octo Round {i+1}: {teams[self.octo[i][0]].rank} {teams[self.octo[i][0]].name} ({teams[self.octo[i][0]].total_wins}-{teams[self.octo[i][0]].total_losses}) vs {teams[self.octo[i][1]].rank} {teams[self.octo[i][1]].name} ({teams[self.octo[i][1]].total_wins}-{teams[self.octo[i][1]].total_losses})")
 
-            winner, loser = self.determine_winner_cfb(teams[octo[i][1]], teams[octo[i][0]])
+            winner, loser = self.determine_winner_cfb(teams[self.octo[i][1]], teams[self.octo[i][0]])
 
-            winner = int(winner == teams[octo[i][1]])
+            winner = int(winner == teams[self.octo[i][1]])
             loser = int(not bool(winner))
 
             #print(f"0-{1+box} | {winner}")
             scores = self.get_scores()
-            quarter[i].append(octo[i][winner])
-            teams[octo[i][winner]].total_wins += 1
-            teams[octo[i][winner]].opponents.append(OpponentMatch(teams[octo[i][loser]], True, scores[0]-scores[1], po_octo=True))
-            teams[octo[i][loser]].total_losses += 1
-            teams[octo[i][loser]].opponents.append(OpponentMatch(teams[octo[i][winner]], False, scores[1]-scores[0], po_octo=True))
-            print(f"{teams[octo[i][winner]].name} {scores[0]} - {scores[1]} {teams[octo[i][loser]].name} | {teams[octo[i][winner]].name} wins!!!\n")
+            self.quarter[i].append(self.octo[i][winner])
+            teams[self.octo[i][winner]].total_wins += 1
+            teams[self.octo[i][winner]].opponents.append(OpponentMatch(teams[self.octo[i][loser]], True, scores[0]-scores[1], po_octo=True))
+            teams[self.octo[i][loser]].total_losses += 1
+            teams[self.octo[i][loser]].opponents.append(OpponentMatch(teams[self.octo[i][winner]], False, scores[1]-scores[0], po_octo=True))
+            print(f"{teams[self.octo[i][winner]].name} {scores[0]} - {scores[1]} {teams[self.octo[i][loser]].name} | {teams[self.octo[i][winner]].name} wins!!!\n")
+
+            self.menu_processor(allow_save_load=False)
 
         # Quarter Matches
         for i in range(4):
-            input(f"CFB Championship Quarter Round {i+1}: {teams[quarter[i][0]].rank} {teams[quarter[i][0]].name} ({teams[quarter[i][0]].total_wins}-{teams[quarter[i][0]].total_losses}) vs {teams[quarter[i][1]].rank} {teams[quarter[i][1]].name} ({teams[quarter[i][1]].total_wins}-{teams[quarter[i][1]].total_losses})")
+            input(f"CFB Championship Quarter Round {i+1}: {teams[self.quarter[i][0]].rank} {teams[self.quarter[i][0]].name} ({teams[self.quarter[i][0]].total_wins}-{teams[self.quarter[i][0]].total_losses}) vs {teams[self.quarter[i][1]].rank} {teams[self.quarter[i][1]].name} ({teams[self.quarter[i][1]].total_wins}-{teams[self.quarter[i][1]].total_losses})")
 
-            winner, loser = self.determine_winner_cfb(teams[quarter[i][0]], teams[quarter[i][1]])
+            winner, loser = self.determine_winner_cfb(teams[self.quarter[i][0]], teams[self.quarter[i][1]])
             
-            winner = int(winner == teams[quarter[i][1]])
+            winner = int(winner == teams[self.quarter[i][1]])
             loser = int(not bool(winner))
 
             #print(f"0-{1+box} | {winner}")
             scores = self.get_scores()
-            semi[i%2].append(quarter[i][winner])
-            teams[quarter[i][winner]].total_wins += 1
-            teams[quarter[i][winner]].opponents.append(OpponentMatch(teams[quarter[i][loser]], True, scores[0]-scores[1], po_quarter=True))
-            teams[quarter[i][loser]].total_losses += 1
-            teams[quarter[i][loser]].opponents.append(OpponentMatch(teams[quarter[i][winner]], False, scores[1]-scores[0], po_quarter=True))
+            self.semi[i//2].append(self.quarter[i][winner])
+            teams[self.quarter[i][winner]].total_wins += 1
+            teams[self.quarter[i][winner]].opponents.append(OpponentMatch(teams[self.quarter[i][loser]], True, scores[0]-scores[1], po_quarter=True))
+            teams[self.quarter[i][loser]].total_losses += 1
+            teams[self.quarter[i][loser]].opponents.append(OpponentMatch(teams[self.quarter[i][winner]], False, scores[1]-scores[0], po_quarter=True))
 
-            print(f"{teams[quarter[i][winner]].name} {scores[0]} - {scores[1]} {teams[quarter[i][loser]].name} | {teams[quarter[i][winner]].name} wins!!!\n")
+            print(f"{teams[self.quarter[i][winner]].name} {scores[0]} - {scores[1]} {teams[self.quarter[i][loser]].name} | {teams[self.quarter[i][winner]].name} wins!!!\n")
+
+            self.menu_processor(allow_save_load=False)
 
         # Semi Matches
         for i in range(2):
-            input(f"CFB Championship Semi Round {i+1}: {teams[semi[i][0]].rank} {teams[semi[i][0]].name} ({teams[semi[i][0]].total_wins}-{teams[semi[i][0]].total_losses}) vs {teams[semi[i][1]].rank} {teams[semi[i][1]].name} ({teams[semi[i][1]].total_wins}-{teams[semi[i][1]].total_losses})")
+            input(f"CFB Championship Semi Round {i+1}: {teams[self.semi[i][0]].rank} {teams[self.semi[i][0]].name} ({teams[self.semi[i][0]].total_wins}-{teams[self.semi[i][0]].total_losses}) vs {teams[self.semi[i][1]].rank} {teams[self.semi[i][1]].name} ({teams[self.semi[i][1]].total_wins}-{teams[self.semi[i][1]].total_losses})")
 
-            winner, loser = self.determine_winner_cfb(teams[semi[i][1]], teams[semi[i][0]])
+            winner, loser = self.determine_winner_cfb(teams[self.semi[i][1]], teams[self.semi[i][0]])
 
-            winner = int(winner == teams[semi[i][1]])
+            winner = int(winner == teams[self.semi[i][1]])
             loser = int(not bool(winner))
 
             #print(f"0-{1+box} | {winner}")
             scores = self.get_scores()
-            final.append(semi[i][winner])
+            self.final.append(self.semi[i][winner])
 
-            teams[semi[i][winner]].total_wins += 1
-            teams[semi[i][winner]].opponents.append(OpponentMatch(teams[semi[i][loser]], True, scores[0]-scores[1], po_semi=True))
-            teams[semi[i][loser]].total_losses += 1
-            teams[semi[i][loser]].opponents.append(OpponentMatch(teams[semi[i][winner]], False, scores[1]-scores[0], po_semi=True))
+            teams[self.semi[i][winner]].total_wins += 1
+            teams[self.semi[i][winner]].opponents.append(OpponentMatch(teams[self.semi[i][loser]], True, scores[0]-scores[1], po_semi=True))
+            teams[self.semi[i][loser]].total_losses += 1
+            teams[self.semi[i][loser]].opponents.append(OpponentMatch(teams[self.semi[i][winner]], False, scores[1]-scores[0], po_semi=True))
 
-            print(f"{teams[semi[i][winner]].name} {scores[0]} - {scores[1]} {teams[semi[i][loser]].name} | {teams[semi[i][winner]].name} wins!!!\n")
+            print(f"{teams[self.semi[i][winner]].name} {scores[0]} - {scores[1]} {teams[self.semi[i][loser]].name} | {teams[self.semi[i][winner]].name} wins!!!\n")
+
+            self.menu_processor(allow_save_load=False)
 
         # The Championship
-        input(f"CFB Championship!!! {teams[final[0]].rank} {teams[final[0]].name} ({teams[final[0]].total_wins}-{teams[final[0]].total_losses}) vs {teams[final[1]].rank} {teams[final[1]].name} ({teams[final[1]].total_wins}-{teams[final[1]].total_losses})")
+        input(f"CFB Championship!!! {teams[self.final[0]].rank} {teams[self.final[0]].name} ({teams[self.final[0]].total_wins}-{teams[self.final[0]].total_losses}) vs {teams[self.final[1]].rank} {teams[self.final[1]].name} ({teams[self.final[1]].total_wins}-{teams[self.final[1]].total_losses})")
 
-        winner, loser = self.determine_winner_cfb(teams[final[1]], teams[final[0]])
+        winner, loser = self.determine_winner_cfb(teams[self.final[1]], teams[self.final[0]])
 
-        winner = int(winner == teams[final[1]])
+        winner = int(winner == teams[self.final[1]])
         loser = int(not bool(winner))
 
         scores = self.get_scores()
-        teams[final[winner]].total_wins += 1
-        teams[final[winner]].opponents.append(OpponentMatch(teams[final[loser]], True, scores[0]-scores[1], po_final=True))
-        teams[final[int(not winner)]].total_losses += 1
-        teams[final[loser]].opponents.append(OpponentMatch(teams[final[winner]], False, scores[1]-scores[0], po_final=True))
+        teams[self.final[winner]].total_wins += 1
+        teams[self.final[winner]].opponents.append(OpponentMatch(teams[self.final[loser]], True, scores[0]-scores[1], po_final=True))
+        teams[self.final[int(not winner)]].total_losses += 1
+        teams[self.final[loser]].opponents.append(OpponentMatch(teams[self.final[winner]], False, scores[1]-scores[0], po_final=True))
 
-        print(f"{teams[final[winner]].name} {scores[0]} - {scores[1]} {teams[final[loser]].name} | {teams[final[winner]].name} wins!!!\n")
-        print(f"{teams[final[winner]].name} are your CFB CHAMPIONS!!!!")
-        print(f"Ranked: {teams[final[winner]].rank} | ({teams[final[winner]].total_wins}-{teams[final[winner]].total_losses})")
+        print(f"{teams[self.final[winner]].name} {scores[0]} - {scores[1]} {teams[self.final[loser]].name} | {teams[self.final[winner]].name} wins!!!\n")
+        print(f"{teams[self.final[winner]].name} are your CFB CHAMPIONS!!!!")
+        print(f"Ranked: {teams[self.final[winner]].rank} | ({teams[self.final[winner]].total_wins}-{teams[self.final[winner]].total_losses})")
 
     def print_full_rankings(self):
         for t in range(len(self.team_ranks)):
@@ -620,7 +628,7 @@ class CFB:
                 self.load_season()
                 print("\n")
             if selection.lower() == "b":
-                cfp = self.get_cfp_12_teams(is_after_con_championships=False)
+                cfp = self.get_cfp_12_teams()
                 self.view_bracket(cfp)
                 print("\n")
             if selection.lower() == "st":
@@ -805,11 +813,11 @@ class CFB:
         else:
             return teams[0]
 
-    def get_cfp_12_teams(self, is_after_con_championships: bool = True) -> list[Team]:
+    def get_cfp_12_teams(self) -> list[Team]:
         cfp_teams = []
 
-        if is_after_con_championships: 
-            self.team_ranks.sort(key=lambda x: (x.is_con_champion, int(x.full_rank)))
+        if self.is_after_conference_championship: 
+            self.team_ranks.sort(key=lambda x: (not x.is_con_champion, int(x.full_rank)))
             cfp_teams = self.team_ranks[:12]
         else:
             for con in self.conferences:
@@ -834,7 +842,75 @@ class CFB:
 
         return cfp_teams
     
+    def cfp_teams_reveal(self, cfp_teams):
+        pass
+    
     def view_bracket(self, cfp_teams: list[Team]):
+        NAME_WIDTH = 17
         for cfp_team in cfp_teams:
             print(f"Seed {cfp_team.cfp_seed}: {cfp_team.name} ({cfp_team.full_rank})")
+
+        QUARTER_1 = cfp_teams[self.quarter[0][1]] if len(self.quarter[0]) > 1 else None
+        QUARTER_2 = cfp_teams[self.quarter[1][1]] if len(self.quarter[1]) > 1 else None
+        QUARTER_3 = cfp_teams[self.quarter[2][1]] if len(self.quarter[2]) > 1 else None
+        QUARTER_4 = cfp_teams[self.quarter[3][1]] if len(self.quarter[3]) > 1 else None
+
+        SEMI_1 = cfp_teams[self.semi[0][0]] if len(self.semi[0]) > 0 else None
+        SEMI_2 = cfp_teams[self.semi[0][1]] if len(self.semi[0]) > 1 else None
+        SEMI_3 = cfp_teams[self.semi[1][0]] if len(self.semi[1]) > 0 else None
+        SEMI_4 = cfp_teams[self.semi[1][1]] if len(self.semi[1]) > 1 else None
+
+        FINAL_1 = cfp_teams[self.final[0]] if len(self.final) > 0 else None
+        FINAL_2 = cfp_teams[self.final[1]] if len(self.final) > 1 else None
+        
+
+        print(
+            f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+            f"~                                                                                                                      \n"
+            f"~   {cfp_teams[8].cfp_seed:>2}) {cfp_teams[8].name:<{NAME_WIDTH}}                                                      \n"
+            f"~   ______________________                                                                                             \n"
+            f"~                         |                                                                                            \n"
+            f"~                         |{(QUARTER_1.cfp_seed if QUARTER_1 else ' '):>2}) {(QUARTER_1.name if QUARTER_1 else ' '):<{NAME_WIDTH}}                                                           \n"
+            f"~   {cfp_teams[7].cfp_seed:>2}) {cfp_teams[7].name:<{NAME_WIDTH}} |_____________________                               \n"
+            f"~   ______________________|                     |                                                                      \n"
+            f"~                                               |{(SEMI_1.cfp_seed if SEMI_1 else ' '):>2}) {(SEMI_1.name if SEMI_1 else ' '):<{NAME_WIDTH}}          \n"
+            f"~                          {cfp_teams[0].cfp_seed:>2}) {cfp_teams[0].name:<{NAME_WIDTH}}|_____________________           \n"
+            f"~                         ______________________|                     |                                                  \n"
+            f"~                                                                     |                                                  \n"
+            f"~                                                                     |                                                  \n"
+            f"~   {cfp_teams[11].cfp_seed:>2}) {cfp_teams[11].name:<{NAME_WIDTH}}                                             |        \n"
+            f"~   ______________________                                            |{(FINAL_1.cfp_seed if FINAL_1 else ' '):>2}) {(FINAL_1.name if FINAL_1 else ' '):<{NAME_WIDTH}}       \n"
+            f"~                         |                                           |______________________                            \n"
+            f"~                         |{(QUARTER_2.cfp_seed if QUARTER_2 else ' '):>2}) {(QUARTER_2.name if QUARTER_2 else ' '):<{NAME_WIDTH}}                      |                      |                           \n"
+            f"~   {cfp_teams[4].cfp_seed:>2}) {cfp_teams[4].name:<{NAME_WIDTH}} |_____________________                      |                      |     \n"
+            f"~   ______________________|                     |                     |                      |                           \n"
+            f"~                                               |{(SEMI_2.cfp_seed if SEMI_2 else ' '):>2}) {(SEMI_2.name if SEMI_2 else ' '):<{NAME_WIDTH}}|                      |                           \n"
+            f"~                          {cfp_teams[3].cfp_seed:>2}) {cfp_teams[3].name:<{NAME_WIDTH}}|_____________________|                      |     \n"
+            f"~                         ______________________|                                            |                           \n"
+            f"~                                                                                            |                           \n"
+            f"~                                                                                            |                           \n"
+            f"~   {cfp_teams[9].cfp_seed:>2}) {cfp_teams[9].name:<{NAME_WIDTH}}                                                                    |     \n"
+            f"~   ______________________                                                                   |                           \n"
+            f"~                         |                                                                  |                           \n"
+            f"~                         |{(QUARTER_3.cfp_seed if QUARTER_3 else ' '):>2}) {(QUARTER_3.name if QUARTER_3 else ' '):<{NAME_WIDTH}}                                             |________________________   \n"
+            f"~   {cfp_teams[6].cfp_seed:>2}) {cfp_teams[6].name:<{NAME_WIDTH}} |_____________________                                             |     \n"
+            f"~   ______________________|                     |                                            |      \n"
+            f"~                                               |{(SEMI_3.cfp_seed if SEMI_3 else ' '):>2}) {(SEMI_3.name if SEMI_3 else ' '):<{NAME_WIDTH}}                       |      \n"
+            f"~                          {cfp_teams[1].cfp_seed:>2}) {cfp_teams[1].name:<{NAME_WIDTH}}|_____________________                       |     \n"
+            f"~                         ______________________|                     |                      |      \n"
+            f"~                                                                     |                      |      \n"
+            f"~                                                                     |                      |      \n" 
+            f"~   {cfp_teams[10].cfp_seed:>2}) {cfp_teams[10].name:<{NAME_WIDTH}}                                             |                      |   \n"
+            f"~   ______________________                                            |{(FINAL_2.cfp_seed if FINAL_2 else ' '):>2}) {(FINAL_2.name if FINAL_2 else ' '):<{NAME_WIDTH}} |      \n"
+            f"~                         |                                           |______________________|               \n"
+            f"~                         |{(QUARTER_4.cfp_seed if QUARTER_4 else ' '):>2}) {(QUARTER_4.name if QUARTER_4 else ' '):<{NAME_WIDTH}}                      |                 \n"
+            f"~   {cfp_teams[5].cfp_seed:>2}) {cfp_teams[5].name:<{NAME_WIDTH}} |_____________________                      |                            \n"
+            f"~   ______________________|                     |                     |               \n"
+            f"~                                               |{(SEMI_4.cfp_seed if SEMI_4 else ' '):>2}) {(SEMI_4.name if SEMI_4 else ' '):<{NAME_WIDTH}}|               \n"
+            f"~                          {cfp_teams[2].cfp_seed:>2}) {cfp_teams[2].name:<{NAME_WIDTH}}|_____________________|                            \n"
+            f"~                         ______________________|                                            \n"
+            f"~                                                                                       \n"
+            f"~                                                                                       \n"
+            f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+        )
         
