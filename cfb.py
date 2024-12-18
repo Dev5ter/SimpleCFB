@@ -95,11 +95,11 @@ class Team:
 
 
 class OpponentMatch:
-    def __init__(self, op, win, pd, conference_champ_game=False, po_octo=False, po_quarter=False, po_semi=False, po_final=False):
+    def __init__(self, op, win, pd, cfb_p="AP", conference_champ_game=False, po_octo=False, po_quarter=False, po_semi=False, po_final=False):
         self.opponent: Team = op
         self.win: bool = win
         self.point_diff: int = pd
-        self.cfb_points: Union[int, str] = "AP"
+        self.cfb_points: Union[int, str] = cfb_p
         self.is_conference_title: bool = conference_champ_game
         self.is_playoff_octo: bool = po_octo
         self.is_playoff_quarter: bool = po_quarter
@@ -407,11 +407,11 @@ class CFB:
             
             winner.total_wins += 1 
             winner.reg_wins += 1
-            winner.opponents.append(OpponentMatch(loser, True, scores[0]-scores[1], True))
+            winner.opponents.append(OpponentMatch(loser, True, scores[0]-scores[1], conference_champ_game=True))
 
             loser.total_losses += 1
             loser.reg_losses += 1
-            loser.opponents.append(OpponentMatch(winner, False, scores[1]-scores[0], True))
+            loser.opponents.append(OpponentMatch(winner, False, scores[1]-scores[0], conference_champ_game=True))
 
 
             input("\n")
@@ -734,11 +734,12 @@ class CFB:
                             op=op_data[0],
                             win=op_data[1] == "True",
                             pd=int(op_data[2]),
-                            conference_champ_game=op_data[3] == "True",
-                            po_octo=op_data[4] == "True",
-                            po_quarter=op_data[5] == "True",
-                            po_semi=op_data[6] == "True",
-                            po_final=op_data[7] == "True",
+                            cfb_p=int(op_data[3]),
+                            conference_champ_game=op_data[4] == "True",
+                            po_octo=op_data[5] == "True",
+                            po_quarter=op_data[6] == "True",
+                            po_semi=op_data[7] == "True",
+                            po_final=op_data[8] == "True",
                         )
                     )
                 self.conferences[con].div1[div_team].opponents = opponents
@@ -765,11 +766,12 @@ class CFB:
                             op=op_data[0],
                             win=op_data[1] == "True",
                             pd=int(op_data[2]),
-                            conference_champ_game=op_data[3] == "True",
-                            po_octo=op_data[4] == "True",
-                            po_quarter=op_data[5] == "True",
-                            po_semi=op_data[6] == "True",
-                            po_final=op_data[7] == "True",
+                            cfb_p=int(op_data[3]),
+                            conference_champ_game=op_data[4] == "True",
+                            po_octo=op_data[5] == "True",
+                            po_quarter=op_data[6] == "True",
+                            po_semi=op_data[7] == "True",
+                            po_final=op_data[8] == "True",
                         )
                     )
                 self.conferences[con].div2[div_team].opponents = opponents
