@@ -13,8 +13,8 @@ class Team:
         self.prev_rank: str = "UR"
         self.full_rank: str = 0
         self.point_diff = 0
-        self.opponents: list[OpponentMatch] = []
         self.cfb_points = 0
+        self.opponents: list[OpponentMatch] = []
 
     def handle_win(self, points) -> None:
         self.reg_wins += 1
@@ -44,6 +44,10 @@ class Team:
     
     def print_team_details(self):
         print(f"{self.name} ({self.total_wins}-{self.total_losses}) PD: {self.point_diff}")
+
+        if self.opponents == []:
+            return
+
         print("Faced: ")
         name_length = max([len(x.opponent.name) for x in self.opponents]) + 1
         for op_match in self.opponents:
@@ -91,11 +95,11 @@ class Team:
 
 
 class OpponentMatch:
-    def __init__(self, op, win, pd, conference_champ_game=False, po_octo=False, po_quarter=False, po_semi=False, po_final=False):
+    def __init__(self, op, win, pd, cfb_p="AP", conference_champ_game=False, po_octo=False, po_quarter=False, po_semi=False, po_final=False):
         self.opponent: Team = op
         self.win: bool = win
         self.point_diff: int = pd
-        self.cfb_points: Union[int, str] = "AP"
+        self.cfb_points: Union[int, str] = cfb_p
         self.is_conference_title: bool = conference_champ_game
         self.is_playoff_octo: bool = po_octo
         self.is_playoff_quarter: bool = po_quarter
@@ -229,6 +233,7 @@ class CFB:
         self.conferences: list[Conference] = self.set_up_season()
         self.team_ranks: list[Team] = []
         self.rank_sig: str = "NA"
+        self.week: int = 1
         self.weights = {
             1:  randint(8,12),
             2:  randint(18,22),
@@ -245,6 +250,7 @@ class CFB:
             13: randint(103,107),
             20: randint(108,112),
         }
+        self.SEASON_FOLDER = "saved_seasons"
 
     def get_scores(self):
         loser = randint(0,52)
@@ -253,7 +259,7 @@ class CFB:
         winner = randint(loser+1, 80+randint(0,9))
         return (winner, loser)
 
-    def play_week(self, week, print_stuff=True):
+    def play_week(self, print_stuff=True):
         teams = []
         for con in self.conferences:
             for team in con.div1:
@@ -283,7 +289,7 @@ class CFB:
                     print("NCAA GAME OF THE WEEK!!!")
                 input(f"Match-up: {away.rank} {away.name} ({away.reg_wins}-{away.reg_losses}) @ {home.rank} {home.name} ({home.reg_wins}-{home.reg_losses})")
 
-            winner, loser = self.determine_winner_ap(home, away) if week < 7 else self.determine_winner_cfb(home, away)
+            winner, loser = self.determine_winner_ap(home, away) if self.week < 7 else self.determine_winner_cfb(home, away)
             scores = self.get_scores()
             self.handle_regular_game(winner, loser, scores, print_stuff)
             winner.opponents.append(OpponentMatch(loser, True, scores[0]-scores[1]))
@@ -332,7 +338,7 @@ class CFB:
             print(f"{(1+i):>2} ({(self.team_ranks[i].get_rank_difference()):>3}) | {(self.team_ranks[i].name):<20} | {(self.team_ranks[i].reg_wins):>2} -{(self.team_ranks[i].reg_losses):>2} | {(self.team_ranks[i].point_diff if self.rank_sig == 'AP' else self.team_ranks[i].cfb_points):>6}")
         print("")
 
-    def make_ap_top25(self, week: int):
+    def make_ap_top25(self):
         self.team_ranks = []
         for con in self.conferences:
             for t in con.div1:
@@ -340,7 +346,7 @@ class CFB:
             for t in con.div2:
                 self.team_ranks.append(t)
         shuffle(self.team_ranks)
-        self.team_ranks.sort(key = lambda x: (x.reg_wins + (x.point_diff/(self.weights[week+1]))), reverse=True)
+        self.team_ranks.sort(key = lambda x: (x.reg_wins + (x.point_diff/(self.weights[self.week]))), reverse=True)
 
         for t in range(len(self.team_ranks)):
             self.team_ranks[t].prev_rank = self.team_ranks[t].rank
@@ -401,11 +407,11 @@ class CFB:
             
             winner.total_wins += 1 
             winner.reg_wins += 1
-            winner.opponents.append(OpponentMatch(loser, True, scores[0]-scores[1], True))
+            winner.opponents.append(OpponentMatch(loser, True, scores[0]-scores[1], conference_champ_game=True))
 
             loser.total_losses += 1
             loser.reg_losses += 1
-            loser.opponents.append(OpponentMatch(winner, False, scores[1]-scores[0], True))
+            loser.opponents.append(OpponentMatch(winner, False, scores[1]-scores[0], conference_champ_game=True))
 
 
             input("\n")
@@ -588,15 +594,35 @@ class CFB:
             print(f"{winner.name} {scores[0]} - {scores[1]} {loser.name}  | {winner.name} wins!\n")
         #return winner, loser
 
-    def menu_processor(self):
+    def menu_processor(self, allow_save_load: bool = True):
         enter_counter = 0
         while True:
-            selection = input(
+            selection_string = (
                 " (FR): See Full Rankings | (A): Advance Week \n"
-                " (TD): Team Details \n"
+                " (TD): Team Details | (ST): Show Top 25 | (SC): Show Confrences\n"
+            )
+            if allow_save_load:
+                selection_string += (
+                    " (S): Save Season | (L): Load Season \n"
+                )
+            selection = input(
+                selection_string +
                 " Selection: "
             )
+
             print("\n")
+            if selection.lower() == "s" and allow_save_load:
+                self.save_season()
+                print("\n")
+            if selection.lower() == "l" and allow_save_load:
+                self.load_season()
+                print("\n")
+            if selection.lower() == "st":
+                self.print_top25()
+                print("\n")
+            if selection.lower() == "sc":
+                self.print_standings()
+                print("\n")
             if selection.lower() == "fr":
                 self.print_full_rankings()
                 print("\n")
@@ -647,6 +673,131 @@ class CFB:
             return (home, away)
         return (away, home)
 
+    def save_season(self):
+        file_name = input("Enter name of save file: ")
+        filepath = f"{self.SEASON_FOLDER}/{file_name}.cfb"
+
+        file = open(file=filepath, mode='w')
+        
+        file.write(f"{self.week},{self.rank_sig},\n")
+
+        for conf in self.conferences:
+            conf: Conference
+            file.write(f"{conf.name}\n{conf.div1_name}\n")
+            for team in conf.div1:
+                team: Team
+                file.write(f"{team.name},{team.reg_wins},{team.reg_losses},{team.total_wins},{team.total_losses},{team.rank},{team.prev_rank},{team.full_rank},{team.point_diff},{team.cfb_points},\n")
+                for op in team.opponents:
+                    op: OpponentMatch
+                    file.write(f"{op.opponent.name},{op.win},{op.point_diff},{op.cfb_points},{op.is_conference_title},{op.is_playoff_octo},{op.is_playoff_quarter},{op.is_playoff_semi},{op.is_playoff_final},\n")
+            file.write(f"{conf.div2_name}\n")
+            for team in conf.div2:
+                team: Team
+                file.write(f"{team.name},{team.reg_wins},{team.reg_losses},{team.total_wins},{team.total_losses},{team.rank},{team.prev_rank},{team.full_rank},{team.point_diff},{team.cfb_points},\n")
+                for op in team.opponents:
+                    op: OpponentMatch
+                    file.write(f"{op.opponent.name},{op.win},{op.point_diff},{op.cfb_points},{op.is_conference_title},{op.is_playoff_octo},{op.is_playoff_quarter},{op.is_playoff_semi},{op.is_playoff_final},\n")
+
+        file.close()
+
+    def load_season(self):
+        file_name = input("Enter name of load file: ")
+        filepath = f"{self.SEASON_FOLDER}/{file_name}.cfb"
+
+        file = open(file=filepath, mode='r')
+        
+        conf_data = file.readline().split(',')[:-1]
+        self.week = int(conf_data[0])
+        self.rank_sig = conf_data[1]
+
+        for con in range(5):
+            self.conferences[con].name = file.readline()[:-1]
+            self.conferences[con].div1_name = file.readline()[:-1]
+            for div_team in range(7):
+                team_data = file.readline().split(',')[:-1]
+                self.conferences[con].div1[div_team].name = team_data[0]
+                self.conferences[con].div1[div_team].reg_wins = int(team_data[1])
+                self.conferences[con].div1[div_team].reg_losses = int(team_data[2])
+                self.conferences[con].div1[div_team].total_wins = int(team_data[3])
+                self.conferences[con].div1[div_team].total_losses = int(team_data[4])
+                self.conferences[con].div1[div_team].rank = team_data[5]
+                self.conferences[con].div1[div_team].prev_rank = team_data[6]
+                self.conferences[con].div1[div_team].full_rank = team_data[7]
+                self.conferences[con].div1[div_team].point_diff = int(team_data[8])
+                self.conferences[con].div1[div_team].cfb_points = int(team_data[9])
+
+                opponents = []
+                for _ in range(self.week - 1):
+                    op_data = file.readline().split(',')[:-1]
+                    opponents.append(
+                        OpponentMatch(
+                            op=op_data[0],
+                            win=op_data[1] == "True",
+                            pd=int(op_data[2]),
+                            cfb_p=int(op_data[3]),
+                            conference_champ_game=op_data[4] == "True",
+                            po_octo=op_data[5] == "True",
+                            po_quarter=op_data[6] == "True",
+                            po_semi=op_data[7] == "True",
+                            po_final=op_data[8] == "True",
+                        )
+                    )
+                self.conferences[con].div1[div_team].opponents = opponents
+
+            self.conferences[con].div2_name = file.readline()[:-1]
+            for div_team in range(7):
+                team_data = file.readline().split(',')[:-1]
+                self.conferences[con].div2[div_team].name = team_data[0]
+                self.conferences[con].div2[div_team].reg_wins = int(team_data[1])
+                self.conferences[con].div2[div_team].reg_losses = int(team_data[2])
+                self.conferences[con].div2[div_team].total_wins = int(team_data[3])
+                self.conferences[con].div2[div_team].total_losses = int(team_data[4])
+                self.conferences[con].div2[div_team].rank = team_data[5]
+                self.conferences[con].div2[div_team].prev_rank = team_data[6]
+                self.conferences[con].div2[div_team].full_rank = team_data[7]
+                self.conferences[con].div2[div_team].point_diff = int(team_data[8])
+                self.conferences[con].div2[div_team].cfb_points = int(team_data[9])
+
+                opponents = []
+                for _ in range(self.week - 1):
+                    op_data = file.readline().split(',')[:-1]
+                    opponents.append(
+                        OpponentMatch(
+                            op=op_data[0],
+                            win=op_data[1] == "True",
+                            pd=int(op_data[2]),
+                            cfb_p=int(op_data[3]),
+                            conference_champ_game=op_data[4] == "True",
+                            po_octo=op_data[5] == "True",
+                            po_quarter=op_data[6] == "True",
+                            po_semi=op_data[7] == "True",
+                            po_final=op_data[8] == "True",
+                        )
+                    )
+                self.conferences[con].div2[div_team].opponents = opponents
 
 
+        file.close()
+
+        # Look up teams names from loading process
+        for conf in self.conferences:
+            for d1 in conf.div1:
+                for to in d1.opponents:
+                    to.opponent = self.return_team_by_name(to.opponent)
+            for d2 in conf.div2:
+                for to in d2.opponents:
+                    to.opponent = self.return_team_by_name(to.opponent)
+        
+
+        # re rank to match saved status
+        self.team_ranks.sort(key=lambda x: int(x.full_rank))
+
+        print("Loading Successful!\n")
+
+    def return_team_by_name(self, name: str):
+        teams = [x for x in self.team_ranks if x.name == name]
+        if teams == []:
+            print("ERROR NO TEAM FOUND: ", name)
+        else:
+            return teams[0]
 
