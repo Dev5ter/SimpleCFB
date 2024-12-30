@@ -1,5 +1,6 @@
 from random import choice, randint, shuffle
 from typing import Union
+from copy import deepcopy
 
 class Team:
 
@@ -349,6 +350,7 @@ class CFB:
             input("")
 
     def print_top25(self):
+        self.team_ranks.sort(key=lambda x: int(x.full_rank))
         print("-----------------------------------------------------")
         print("{0:^54}".format(f"{self.rank_sig} Top 25"))
         print("-----------------------------------------------------")
@@ -391,7 +393,7 @@ class CFB:
             self.team_ranks[t].full_rank = str(t+1)
             self.team_ranks[t].rank = str(t+1) if t < 25 else "UR"
 
-        self.team_ranks.sort(key = lambda x: x.calc_cfb_points(), reverse=True)
+        self.team_ranks.sort(key = lambda x: (x.calc_cfb_points(), x.total_wins, x.point_diff, x.prev_rank), reverse=True)
 
         for i in range(len(self.team_ranks)-1):
             for op_match in self.team_ranks[i].opponents[::-1]:
@@ -501,15 +503,7 @@ class CFB:
         print(f"Ranked: {teams[0].rank} ({teams[0].total_wins}-{teams[0].total_losses})")
             
     def playoffs_twelve(self):
-        teams = []
-        for con in self.conferences:
-            for team in con.div1:
-                teams.append(team)
-            for team in con.div2:
-                teams.append(team)
-        teams.sort(key= self.ranking)
-
-        teams = teams[:12]
+        teams = self.get_cfp_12_teams()
 
         # Octo Matches
         for i in range(4):
@@ -609,7 +603,7 @@ class CFB:
         enter_counter = 0
         while True:
             selection_string = (
-                " (FR): See Full Rankings | (A): Advance Week \n"
+                " (FR): See Full Rankings | (A): Advance Week | (B): Show Bracket\n"
                 " (TD): Team Details | (ST): Show Top 25 | (SC): Show Confrences\n"
             )
             if allow_save_load:
@@ -629,7 +623,7 @@ class CFB:
                 self.load_season()
                 print("\n")
             if selection.lower() == "b":
-                cfp = self.get_cfp_12_teams()
+                cfp = self.get_cfp_12_teams(get_first_two_out=True)
                 self.view_bracket(cfp)
                 print("\n")
             if selection.lower() == "st":
@@ -644,7 +638,9 @@ class CFB:
             if selection.lower() == "td":
                 tr = input("Enter the team's rank you want to see: ")
                 if tr.isdigit():
-                    self.team_ranks[int(tr)-1].print_team_details()
+                    viewing = deepcopy(self.team_ranks)
+                    viewing.sort(key=lambda x: int(x.full_rank))
+                    viewing[int(tr)-1].print_team_details()
                     print("\n")
                 else:
                     print("next time enter a digit\n")
@@ -749,7 +745,11 @@ class CFB:
                             op=op_data[0],
                             win=op_data[1] == "True",
                             pd=int(op_data[2]),
-                            cfb_p=int(op_data[3]),
+                            cfb_p=(
+                                int(op_data[3])
+                                if op_data[3].isdigit() or op_data[3].lstrip('-').isdigit()
+                                else "AP"
+                            ),
                             conference_champ_game=op_data[4] == "True",
                             po_octo=op_data[5] == "True",
                             po_quarter=op_data[6] == "True",
@@ -781,7 +781,11 @@ class CFB:
                             op=op_data[0],
                             win=op_data[1] == "True",
                             pd=int(op_data[2]),
-                            cfb_p=int(op_data[3]),
+                            cfb_p=(
+                                int(op_data[3])
+                                if op_data[3].isdigit() or op_data[3].lstrip('-').isdigit()
+                                else "AP"
+                            ),
                             conference_champ_game=op_data[4] == "True",
                             po_octo=op_data[5] == "True",
                             po_quarter=op_data[6] == "True",
@@ -809,19 +813,20 @@ class CFB:
 
         print("Loading Successful!\n")
 
-    def return_team_by_name(self, name: str):
+    def return_team_by_name(self, name: str) -> Team:
         teams = [x for x in self.team_ranks if x.name == name]
         if teams == []:
             print("ERROR NO TEAM FOUND: ", name)
         else:
             return teams[0]
 
-    def get_cfp_12_teams(self) -> list[Team]:
+    def get_cfp_12_teams(self, get_first_two_out:bool = False) -> list[Team]:
         cfp_teams = []
+        limit = 14 if get_first_two_out else 12
 
         if self.is_after_conference_championship: 
             self.team_ranks.sort(key=lambda x: (not x.is_con_champion, int(x.full_rank)))
-            cfp_teams = self.team_ranks[:12]
+            cfp_teams = self.team_ranks[:limit]
         else:
             for con in self.conferences:
                 teams = []
@@ -833,25 +838,66 @@ class CFB:
                 teams.sort(key=lambda x: int(x.full_rank))
                 cfp_teams.append(teams[0])
             index = 0
-            while len(cfp_teams) < 12:
+            while len(cfp_teams) < limit:
                 if self.team_ranks[index] not in cfp_teams:
                     cfp_teams.append(self.team_ranks[index])
 
                 index += 1
-        
+        if get_first_two_out:
+            f2o = cfp_teams[-2:]
+            cfp_teams = cfp_teams[:-2]
         cfp_teams.sort(key=lambda x: int(x.full_rank))
-        for team_seed in range(1, 13):
+        
+        if get_first_two_out:
+            cfp_teams += f2o 
+
+        for team_seed in range(1, limit+1):
             cfp_teams[team_seed-1].cfp_seed = team_seed
 
         return cfp_teams
     
-    def cfp_teams_reveal(self, cfp_teams):
-        pass
+    def cfp_teams_reveal(self):
+
+        def print_reveal(teams: list[Team], other_made_it, outs):
+            print("---------------------------------")
+            print("| Sd  | Rk  |        Name        | ")
+            print("---------------------------------")
+            for i in range(1, 13):
+                team = next((x for x in teams if x.cfp_seed == i), None)
+                print(f"| {i:>2}) | {(team.full_rank if team else ' '):>2}) | {(team.name if team else ' '):^17} |")
+            
+            print("\n\n-----------------")
+            print(f"First Out: {outs[0].name if len(teams)==12 else ' '}")
+            print(f"Second Out: {outs[1].name if len(teams)==12 else ' '}")
+            
+            if len(teams) != 12:
+                print("\n\nUnplaced Teams")
+                unrevealed = other_made_it+outs 
+                shuffle(unrevealed)
+                for up_teams in unrevealed:
+                    up_teams: Team
+                    print(up_teams.name)
+
+        cfp_teams = self.get_cfp_12_teams(get_first_two_out=True)
+        made_it = cfp_teams[:12]
+        made_it.sort(key=lambda x: (not x.is_con_champion, int(x.full_rank)))
+        out = cfp_teams[-2:]
+
+        revealed_teams = []
+        for i in range(12):
+            revealed_teams.append(made_it.pop(0))
+            print_reveal(revealed_teams, made_it, out)
+            input("")
+            
     
     def view_bracket(self, cfp_teams: list[Team]):
         NAME_WIDTH = 17
+        counter = 1
         for cfp_team in cfp_teams:
+            if counter == 13:
+                print("\n-------------FIRST-TWO-OUT--------------\n")
             print(f"Seed {cfp_team.cfp_seed}: {cfp_team.name} ({cfp_team.full_rank})")
+            counter += 1
 
         QUARTER_1 = cfp_teams[self.quarter[0][1]] if len(self.quarter[0]) > 1 else None
         QUARTER_2 = cfp_teams[self.quarter[1][1]] if len(self.quarter[1]) > 1 else None
