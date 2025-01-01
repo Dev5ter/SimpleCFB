@@ -271,6 +271,7 @@ class CFB:
             [],
         ]
         self.final = []
+        self.winner: Team = None
         self.SEASON_FOLDER = "saved_seasons"
 
     def get_scores(self):
@@ -412,8 +413,8 @@ class CFB:
 
     def conference_championships(self):
         for con in self.conferences:
-            con.div1.sort(key= lambda x: x.reg_wins, reverse=True)
-            con.div2.sort(key= lambda x: x.reg_wins, reverse=True)
+            con.div1.sort(key= lambda x: int(x.full_rank))
+            con.div2.sort(key= lambda x: int(x.full_rank))
 
             team1 = con.div1[0]
             team2 = con.div2[0]
@@ -572,6 +573,7 @@ class CFB:
         input(f"CFB Championship!!! {teams[self.final[0]].rank} {teams[self.final[0]].name} ({teams[self.final[0]].total_wins}-{teams[self.final[0]].total_losses}) vs {teams[self.final[1]].rank} {teams[self.final[1]].name} ({teams[self.final[1]].total_wins}-{teams[self.final[1]].total_losses})")
 
         winner, loser = self.determine_winner_cfb(teams[self.final[1]], teams[self.final[0]])
+        self.winner = winner
 
         winner = int(winner == teams[self.final[1]])
         loser = int(not bool(winner))
@@ -859,12 +861,12 @@ class CFB:
     def cfp_teams_reveal(self):
 
         def print_reveal(teams: list[Team], other_made_it, outs):
-            print("---------------------------------")
-            print("| Sd  | Rk  |        Name        | ")
-            print("---------------------------------")
+            print("--------------------------------------------")
+            print("| Sd  | Rk  |       Name        |  Record |")
+            print("--------------------------------------------")
             for i in range(1, 13):
                 team = next((x for x in teams if x.cfp_seed == i), None)
-                print(f"| {i:>2}) | {(team.full_rank if team else ' '):>2}) | {(team.name if team else ' '):^17} |")
+                print(f"| {i:>2}) | {(team.full_rank if team else ' '):>2}) | {(team.name if team else ' '):^17} | {(f'({team.total_wins:>2} - {team.total_losses:>2})' if team else ' '):<8}")
             
             print("\n\n-----------------")
             print(f"First Out: {outs[0].name if len(teams)==12 else ' '}")
@@ -873,10 +875,10 @@ class CFB:
             if len(teams) != 12:
                 print("\n\nUnplaced Teams")
                 unrevealed = other_made_it+outs 
-                shuffle(unrevealed)
+                unrevealed.sort(key=lambda x: x.name)
                 for up_teams in unrevealed:
                     up_teams: Team
-                    print(up_teams.name)
+                    print(f"{up_teams.name:<17}: ({up_teams.prev_rank:>2}) ({up_teams.total_wins:>2} - {up_teams.total_losses:>2})")
 
         cfp_teams = self.get_cfp_12_teams(get_first_two_out=True)
         made_it = cfp_teams[:12]
@@ -884,6 +886,8 @@ class CFB:
         out = cfp_teams[-2:]
 
         revealed_teams = []
+        print_reveal(revealed_teams, made_it, out)
+        input("\n")
         for i in range(12):
             revealed_teams.append(made_it.pop(0))
             print_reveal(revealed_teams, made_it, out)
@@ -911,6 +915,8 @@ class CFB:
 
         FINAL_1 = cfp_teams[self.final[0]] if len(self.final) > 0 else None
         FINAL_2 = cfp_teams[self.final[1]] if len(self.final) > 1 else None
+
+        WINNER = self.winner
         
 
         print(
@@ -940,7 +946,7 @@ class CFB:
             f"~                                                                                            |                           \n"
             f"~   {cfp_teams[9].cfp_seed:>2}) {cfp_teams[9].name:<{NAME_WIDTH}}                                                                    |     \n"
             f"~   ______________________                                                                   |                           \n"
-            f"~                         |                                                                  |                           \n"
+            f"~                         |                                                                  |{(WINNER.cfp_seed if WINNER else ' '):>2}) {(WINNER.name if WINNER else ' '):<{NAME_WIDTH}}  \n"
             f"~                         |{(QUARTER_3.cfp_seed if QUARTER_3 else ' '):>2}) {(QUARTER_3.name if QUARTER_3 else ' '):<{NAME_WIDTH}}                                             |________________________   \n"
             f"~   {cfp_teams[6].cfp_seed:>2}) {cfp_teams[6].name:<{NAME_WIDTH}} |_____________________                                             |     \n"
             f"~   ______________________|                     |                                            |      \n"

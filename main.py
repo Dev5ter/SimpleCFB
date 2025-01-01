@@ -24,6 +24,8 @@ def main():
         ncaa.menu_processor()
 
     ncaa.conference_championships()
+    ncaa.menu_processor(allow_save_load=False)
+    
     ncaa.make_cfb_top_25()
     ncaa.cfp_teams_reveal()
     ncaa.print_top25()
