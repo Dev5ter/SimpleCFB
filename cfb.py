@@ -358,7 +358,7 @@ class CFB:
         print(f"Rk (+/-) |         Name         | Record | {'Point_Diff' if self.rank_sig=='AP' else 'CFB Points'}")
         print("-----------------------------------------------------")
         for i in range(25):
-            print(f"{(1+i):>2} ({(self.team_ranks[i].get_rank_difference()):>3}) | {(self.team_ranks[i].name):<20} | {(self.team_ranks[i].reg_wins):>2} -{(self.team_ranks[i].reg_losses):>2} | {(self.team_ranks[i].point_diff if self.rank_sig == 'AP' else self.team_ranks[i].cfb_points):>6}")
+            print(f"{(1+i):>2} ({(self.team_ranks[i].get_rank_difference()):>3}) | {(self.team_ranks[i].name):<20} | {(self.team_ranks[i].total_wins):>2} -{(self.team_ranks[i].total_losses):>2} | {(self.team_ranks[i].point_diff if self.rank_sig == 'AP' else self.team_ranks[i].cfb_points):>6}")
         print("")
 
     def make_ap_top25(self):
@@ -862,7 +862,7 @@ class CFB:
 
         def print_reveal(teams: list[Team], other_made_it, outs):
             print("--------------------------------------------")
-            print("| Sd  | Rk  |       Name        |  Record |")
+            print("| Sd  | Rk  |       Name        |  Record  |")
             print("--------------------------------------------")
             for i in range(1, 13):
                 team = next((x for x in teams if x.cfp_seed == i), None)
