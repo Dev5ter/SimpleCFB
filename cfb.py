@@ -891,6 +891,16 @@ class CFB:
         for i in range(12):
             revealed_teams.append(made_it.pop(0))
             print_reveal(revealed_teams, made_it, out)
+
+            if i == 10:
+                input("")
+                comb = made_it + out 
+                comb.sort(key = lambda x: x.name)
+                for team in comb:
+                    print("\n")
+                    team.print_team_details()
+                    print("\n")
+
             input("")
             
     
