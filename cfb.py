@@ -45,8 +45,28 @@ class Team:
             return str(f"-{r-pr}")
         return str(f"+{pr-r}")
     
-    def print_team_details(self):
-        print(f"{self.name} ({self.total_wins}-{self.total_losses}) PD: {self.point_diff}")
+    def get_ranked_and_unranked_records(self):
+        rw = 0
+        rl = 0
+        urw = 0
+        url = 0
+        for op in self.opponents:
+            op: OpponentMatch
+            if op.opponent.rank.isdigit():
+                if op.win:
+                    rw += 1
+                else:
+                    rl += 1
+            elif op.win:
+                urw += 1
+            else:
+                url += 1
+    
+        return rw, rl, urw, url
+
+    def print_team_details(self, show_cfp_points: bool = True):
+        rw, rl, urw, url = self.get_ranked_and_unranked_records()
+        print(f"{self.name} ({self.total_wins}-{self.total_losses}) CFP: {self.cfb_points if show_cfp_points else '???'} PD: {self.point_diff} RR: ({rw}-{rl}) URR: ({urw}-{url})")
 
         if self.opponents == []:
             return
@@ -67,7 +87,7 @@ class Team:
             if op_match.is_playoff_final:
                 print("\n---------------- Playoff Championship --------------------------")
 
-            print(f"  - {'W' if op_match.win else 'L'} ({op.rank:>2}) {op.name:<{name_length}} ({op.total_wins}-{op.total_losses}) PD: {op_match.point_diff:<4} CFB_P: {op_match.cfb_points:>3}")
+            print(f"  - {'W' if op_match.win else 'L'} ({op.rank:>2}) {op.name:<{name_length}} ({op.total_wins}-{op.total_losses}) PD: {op_match.point_diff:<4} CFB_P: {(op_match.cfb_points if show_cfp_points else '???'):>3}")
     
     def calc_cfb_points(self):
         points = 0
@@ -80,14 +100,14 @@ class Team:
             this_point = 0
             if win:
                 if op.rank.isdigit():
-                    this_point += 53 - int(op.rank) + op.reg_wins + (pd  // 10)
+                    this_point += 50 - int(op.rank) + (2 * op.reg_wins) + (pd  // 7) #  pd 3
                 else:
-                    this_point += 10 + (2 * op.reg_wins) + (pd // 15)
+                    this_point += 12 + (2 * op.reg_wins) + (pd // 14) #  pd 7
             else:
                 if op.rank.isdigit():
-                    this_point -= (int(op.rank) + 15 - (pd // 5))
+                    this_point -= (int(op.rank) + 15 - (pd // 9)) #  pd 7
                 else:
-                    this_point -= ((int(op.full_rank) // 2) + 25 + op.reg_losses - (pd // 3))
+                    this_point -= ((int(op.full_rank) // 2) + 25 + op.reg_losses - (pd // 5))
             
             op_match.cfb_points = this_point
 
@@ -396,14 +416,19 @@ class CFB:
 
         self.team_ranks.sort(key = lambda x: (x.calc_cfb_points(), x.total_wins, x.point_diff, x.prev_rank), reverse=True)
 
-        for i in range(len(self.team_ranks)-1):
-            for op_match in self.team_ranks[i].opponents[::-1]:
-                if not op_match.win and self.team_ranks[i+1] == op_match.opponent:
-                    # print(f"SWITCH: {self.team_ranks[i].name}")
-                    temp: OpponentMatch = self.team_ranks[i+1]
-                    self.team_ranks[i+1] = self.team_ranks[i]
-                    self.team_ranks[i] = temp
-                    break
+        for repeat_checks in range(25):
+            not_moved: bool = True
+            for i in range(len(self.team_ranks)-1):
+                for op_match in self.team_ranks[i].opponents[::-1]:
+                    if not op_match.win and self.team_ranks[i+1] == op_match.opponent:
+                        # print(f"SWITCH: {self.team_ranks[i].name}")
+                        temp: OpponentMatch = self.team_ranks[i+1]
+                        self.team_ranks[i+1] = self.team_ranks[i]
+                        self.team_ranks[i] = temp
+                        not_moved = False
+                        break
+            if not_moved:
+                break
 
         for t in range(len(self.team_ranks)):
             self.team_ranks[t].full_rank = str(t+1)
@@ -636,6 +661,10 @@ class CFB:
                 print("\n")
             if selection.lower() == "fr":
                 self.print_full_rankings()
+                print("\n")
+            if selection.lower() == "rr":
+                self.make_cfb_top_25()
+                self.print_top25()
                 print("\n")
             if selection.lower() == "td":
                 tr = input("Enter the team's rank you want to see: ")
@@ -891,6 +920,16 @@ class CFB:
         for i in range(12):
             revealed_teams.append(made_it.pop(0))
             print_reveal(revealed_teams, made_it, out)
+
+            if i == 10:
+                input("")
+                comb = made_it + out 
+                comb.sort(key = lambda x: x.name)
+                for team in comb:
+                    print("\n")
+                    team.print_team_details(show_cfp_points=False)
+                    print("\n")
+
             input("")
             
     
