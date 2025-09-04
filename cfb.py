@@ -4,8 +4,8 @@ from copy import deepcopy
 
 class Team:
 
-    def __init__(self, n) -> None:
-        self.name = n
+    def __init__(self, team_name) -> None:
+        self.name = team_name
         self.reg_wins: int = 0
         self.reg_losses: int = 0
         self.total_wins: int = 0
@@ -300,14 +300,18 @@ class CFB:
             loser = 7
         winner = randint(loser+1, 80+randint(0,9))
         return (winner, loser)
-
-    def play_week(self, print_stuff=True):
+    
+    def get_all_teams(self) -> list[Team]:
         teams = []
         for con in self.conferences:
             for team in con.div1:
                 teams.append(team)
             for team in con.div2:
                 teams.append(team)
+        return teams
+
+    def play_week(self, print_stuff=True):
+        teams = self.get_all_teams()
 
         matches: list[list[Team]] = []
 
@@ -382,12 +386,7 @@ class CFB:
         print("")
 
     def make_ap_top25(self):
-        self.team_ranks = []
-        for con in self.conferences:
-            for t in con.div1:
-                self.team_ranks.append(t)
-            for t in con.div2:
-                self.team_ranks.append(t)
+        self.team_ranks = self.get_all_teams()
         shuffle(self.team_ranks)
         self.team_ranks.sort(key = lambda x: (x.reg_wins + (x.point_diff/(self.weights[self.week]))), reverse=True)
 
@@ -396,16 +395,10 @@ class CFB:
             self.team_ranks[t].full_rank = str(t+1)
             self.team_ranks[t].rank = str(t+1) if t < 25 else "UR"
 
-
         self.rank_sig = "AP"
     
     def make_cfb_top_25(self):
-        self.team_ranks = []
-        for con in self.conferences:
-            for t in con.div1:
-                self.team_ranks.append(t)
-            for t in con.div2:
-                self.team_ranks.append(t)
+        self.team_ranks = self.get_all_teams()
         shuffle(self.team_ranks)
 
         self.team_ranks.sort(key = lambda x: x.calc_cfb_points(), reverse=True)
@@ -468,12 +461,7 @@ class CFB:
         self.is_after_conference_championship = True
     
     def playoffs_four(self):
-        teams = []
-        for con in self.conferences:
-            for team in con.div1:
-                teams.append(team)
-            for team in con.div2:
-                teams.append(team)
+        teams = self.get_all_teams()
         teams.sort(key= self.ranking)
 
         # Semi Final 1 (1 v 4)
@@ -837,7 +825,6 @@ class CFB:
             for d2 in conf.div2:
                 for to in d2.opponents:
                     to.opponent = self.return_team_by_name(to.opponent)
-        
 
         # re rank to match saved status
         self.team_ranks.sort(key=lambda x: int(x.full_rank))
@@ -929,6 +916,10 @@ class CFB:
                     print("\n")
                     team.print_team_details(show_cfp_points=False)
                     print("\n")
+                
+                input("")
+                print_reveal(revealed_teams, made_it, out)
+                input("")
 
             input("")
             
