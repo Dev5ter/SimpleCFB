@@ -30,6 +30,9 @@ class Team:
         self.point_diff -= points
     
     def get_rank_difference(self) -> str:
+        """
+        This is currently only called by Top 25 teams, hence the message below
+        """
         if self.rank == "UR":
             return "THIS SHOULD NOT HAPPEN"
 
@@ -87,7 +90,7 @@ class Team:
             if op_match.is_playoff_final:
                 print("\n---------------- Playoff Championship --------------------------")
 
-            print(f"  - {'W' if op_match.win else 'L'} ({op.rank:>2}) {op.name:<{name_length}} ({op.total_wins}-{op.total_losses}) PD: {op_match.point_diff:<4} CFB_P: {(op_match.cfb_points if show_cfp_points else '???'):>3}")
+            print(f"  - {'W' if op_match.win else 'L'} ({op.rank:>2}) {op.name:<{name_length}} ({op.total_wins}-{op.total_losses}) PD: {op_match.point_diff:<4} RH: ( {op_match.rank_history[0]:>2} - {op_match.rank_history[1]:>2} ) CFB_P: {(op_match.cfb_points if show_cfp_points else '???'):>3}")
     
     def calc_cfb_points(self):
         points = 0
@@ -118,10 +121,11 @@ class Team:
 
 
 class OpponentMatch:
-    def __init__(self, op, win, pd, cfb_p="AP", conference_champ_game=False, po_octo=False, po_quarter=False, po_semi=False, po_final=False):
+    def __init__(self, op, win, pd, rh, cfb_p="AP", conference_champ_game=False, po_octo=False, po_quarter=False, po_semi=False, po_final=False):
         self.opponent: Team = op
         self.win: bool = win
         self.point_diff: int = pd
+        self.rank_history: tuple = rh
         self.cfb_points: Union[int, str] = cfb_p
         self.is_conference_title: bool = conference_champ_game
         self.is_playoff_octo: bool = po_octo
@@ -131,18 +135,12 @@ class OpponentMatch:
 
 
 class Conference:
-    name: str
-    div1: list[Team]
-    div2: list[Team]
-    div1_name: str
-    div2_name: str
-
     def __init__(self, n, t1, t2, dn1, dn2) -> None:
-        self.name = n
-        self.div1 = t1
-        self.div2 = t2
-        self.div1_name = dn1
-        self.div2_name = dn2
+        self.name: str = n
+        self.div1: list[Team] = t1
+        self.div2: list[Team] = t2
+        self.div1_name: str = dn1
+        self.div2_name: str = dn2
 
 
 class CFB:
@@ -338,8 +336,8 @@ class CFB:
             winner, loser = self.determine_winner_ap(home, away) if self.week < 7 else self.determine_winner_cfb(home, away)
             scores = self.get_scores()
             self.handle_regular_game(winner, loser, scores, print_stuff)
-            winner.opponents.append(OpponentMatch(loser, True, scores[0]-scores[1]))
-            loser.opponents.append(OpponentMatch(winner, False, scores[1]-scores[0]))
+            winner.opponents.append(OpponentMatch(loser, True, scores[0]-scores[1], (winner.rank, loser.rank)))
+            loser.opponents.append(OpponentMatch(winner, False, scores[1]-scores[0], (loser.rank, winner.rank)))
 
     def sort_prime_time(self, game):
         #print(type(game), len(game), game)
@@ -450,11 +448,11 @@ class CFB:
             winner.reg_wins += 1
 
             winner.is_con_champion = True
-            winner.opponents.append(OpponentMatch(loser, True, scores[0]-scores[1], conference_champ_game=True))
+            winner.opponents.append(OpponentMatch(loser, True, scores[0]-scores[1], (winner.rank, loser.rank), conference_champ_game=True))
 
             loser.total_losses += 1
             loser.reg_losses += 1
-            loser.opponents.append(OpponentMatch(winner, False, scores[1]-scores[0], conference_champ_game=True))
+            loser.opponents.append(OpponentMatch(winner, False, scores[1]-scores[0], (loser.rank, winner.rank), conference_champ_game=True))
 
 
             input("\n")
@@ -532,9 +530,9 @@ class CFB:
             scores = self.get_scores()
             self.quarter[i].append(self.octo[i][winner])
             teams[self.octo[i][winner]].total_wins += 1
-            teams[self.octo[i][winner]].opponents.append(OpponentMatch(teams[self.octo[i][loser]], True, scores[0]-scores[1], po_octo=True))
+            teams[self.octo[i][winner]].opponents.append(OpponentMatch(teams[self.octo[i][loser]], True, scores[0]-scores[1], (teams[self.octo[i][winner]].rank, teams[self.octo[i][loser]].rank), po_octo=True))
             teams[self.octo[i][loser]].total_losses += 1
-            teams[self.octo[i][loser]].opponents.append(OpponentMatch(teams[self.octo[i][winner]], False, scores[1]-scores[0], po_octo=True))
+            teams[self.octo[i][loser]].opponents.append(OpponentMatch(teams[self.octo[i][winner]], False, scores[1]-scores[0], (teams[self.octo[i][loser]].rank, teams[self.octo[i][winner]].rank), po_octo=True))
             print(f"{teams[self.octo[i][winner]].name} {scores[0]} - {scores[1]} {teams[self.octo[i][loser]].name} | {teams[self.octo[i][winner]].name} wins!!!\n")
 
             self.menu_processor(allow_save_load=False)
@@ -552,9 +550,9 @@ class CFB:
             scores = self.get_scores()
             self.semi[i//2].append(self.quarter[i][winner])
             teams[self.quarter[i][winner]].total_wins += 1
-            teams[self.quarter[i][winner]].opponents.append(OpponentMatch(teams[self.quarter[i][loser]], True, scores[0]-scores[1], po_quarter=True))
+            teams[self.quarter[i][winner]].opponents.append(OpponentMatch(teams[self.quarter[i][loser]], True, scores[0]-scores[1], (teams[self.quarter[i][winner]].rank, teams[self.quarter[i][loser]].rank), po_quarter=True))
             teams[self.quarter[i][loser]].total_losses += 1
-            teams[self.quarter[i][loser]].opponents.append(OpponentMatch(teams[self.quarter[i][winner]], False, scores[1]-scores[0], po_quarter=True))
+            teams[self.quarter[i][loser]].opponents.append(OpponentMatch(teams[self.quarter[i][winner]], False, scores[1]-scores[0], (teams[self.quarter[i][loser]].rank, teams[self.quarter[i][winner]].rank), po_quarter=True))
 
             print(f"{teams[self.quarter[i][winner]].name} {scores[0]} - {scores[1]} {teams[self.quarter[i][loser]].name} | {teams[self.quarter[i][winner]].name} wins!!!\n")
 
@@ -574,9 +572,9 @@ class CFB:
             self.final.append(self.semi[i][winner])
 
             teams[self.semi[i][winner]].total_wins += 1
-            teams[self.semi[i][winner]].opponents.append(OpponentMatch(teams[self.semi[i][loser]], True, scores[0]-scores[1], po_semi=True))
+            teams[self.semi[i][winner]].opponents.append(OpponentMatch(teams[self.semi[i][loser]], True, scores[0]-scores[1], (teams[self.semi[i][winner]].rank, teams[self.semi[i][loser]].rank), po_semi=True))
             teams[self.semi[i][loser]].total_losses += 1
-            teams[self.semi[i][loser]].opponents.append(OpponentMatch(teams[self.semi[i][winner]], False, scores[1]-scores[0], po_semi=True))
+            teams[self.semi[i][loser]].opponents.append(OpponentMatch(teams[self.semi[i][winner]], False, scores[1]-scores[0], (teams[self.semi[i][loser]].rank, teams[self.semi[i][winner]].rank), po_semi=True))
 
             print(f"{teams[self.semi[i][winner]].name} {scores[0]} - {scores[1]} {teams[self.semi[i][loser]].name} | {teams[self.semi[i][winner]].name} wins!!!\n")
 
@@ -593,9 +591,9 @@ class CFB:
 
         scores = self.get_scores()
         teams[self.final[winner]].total_wins += 1
-        teams[self.final[winner]].opponents.append(OpponentMatch(teams[self.final[loser]], True, scores[0]-scores[1], po_final=True))
+        teams[self.final[winner]].opponents.append(OpponentMatch(teams[self.final[loser]], True, scores[0]-scores[1], (teams[self.final[winner]].rank, teams[self.final[loser]].rank), (winner), po_final=True))
         teams[self.final[int(not winner)]].total_losses += 1
-        teams[self.final[loser]].opponents.append(OpponentMatch(teams[self.final[winner]], False, scores[1]-scores[0], po_final=True))
+        teams[self.final[loser]].opponents.append(OpponentMatch(teams[self.final[winner]], False, scores[1]-scores[0], (teams[self.final[loser]].rank, teams[self.final[winner]].rank), po_final=True))
 
         print(f"{teams[self.final[winner]].name} {scores[0]} - {scores[1]} {teams[self.final[loser]].name} | {teams[self.final[winner]].name} wins!!!\n")
         print(f"{teams[self.final[winner]].name} are your CFB CHAMPIONS!!!!")
@@ -612,7 +610,6 @@ class CFB:
 
         if print_stuff:
             print(f"{winner.name} {scores[0]} - {scores[1]} {loser.name}  | {winner.name} wins!\n")
-        #return winner, loser
 
     def menu_processor(self, allow_save_load: bool = True):
         enter_counter = 0
@@ -719,14 +716,14 @@ class CFB:
                 file.write(f"{team.name},{team.reg_wins},{team.reg_losses},{team.total_wins},{team.total_losses},{team.rank},{team.prev_rank},{team.full_rank},{team.point_diff},{team.cfb_points},\n")
                 for op in team.opponents:
                     op: OpponentMatch
-                    file.write(f"{op.opponent.name},{op.win},{op.point_diff},{op.cfb_points},{op.is_conference_title},{op.is_playoff_octo},{op.is_playoff_quarter},{op.is_playoff_semi},{op.is_playoff_final},\n")
+                    file.write(f"{op.opponent.name},{op.win},{op.point_diff},{op.rank_history[0]},{op.rank_history[1]},{op.cfb_points},{op.is_conference_title},{op.is_playoff_octo},{op.is_playoff_quarter},{op.is_playoff_semi},{op.is_playoff_final},\n")
             file.write(f"{conf.div2_name}\n")
             for team in conf.div2:
                 team: Team
                 file.write(f"{team.name},{team.reg_wins},{team.reg_losses},{team.total_wins},{team.total_losses},{team.rank},{team.prev_rank},{team.full_rank},{team.point_diff},{team.cfb_points},\n")
                 for op in team.opponents:
                     op: OpponentMatch
-                    file.write(f"{op.opponent.name},{op.win},{op.point_diff},{op.cfb_points},{op.is_conference_title},{op.is_playoff_octo},{op.is_playoff_quarter},{op.is_playoff_semi},{op.is_playoff_final},\n")
+                    file.write(f"{op.opponent.name},{op.win},{op.point_diff},{op.rank_history[0]},{op.rank_history[1]},{op.cfb_points},{op.is_conference_title},{op.is_playoff_octo},{op.is_playoff_quarter},{op.is_playoff_semi},{op.is_playoff_final},\n")
 
         file.close()
 
@@ -764,16 +761,17 @@ class CFB:
                             op=op_data[0],
                             win=op_data[1] == "True",
                             pd=int(op_data[2]),
+                            rh=(op_data[3],op_data[4]),
                             cfb_p=(
-                                int(op_data[3])
-                                if op_data[3].isdigit() or op_data[3].lstrip('-').isdigit()
+                                int(op_data[5])
+                                if op_data[5].isdigit() or op_data[5].lstrip('-').isdigit()
                                 else "AP"
                             ),
-                            conference_champ_game=op_data[4] == "True",
-                            po_octo=op_data[5] == "True",
-                            po_quarter=op_data[6] == "True",
-                            po_semi=op_data[7] == "True",
-                            po_final=op_data[8] == "True",
+                            conference_champ_game=op_data[6] == "True",
+                            po_octo=op_data[7] == "True",
+                            po_quarter=op_data[8] == "True",
+                            po_semi=op_data[9] == "True",
+                            po_final=op_data[10] == "True",
                         )
                     )
                 self.conferences[con].div1[div_team].opponents = opponents
@@ -800,16 +798,17 @@ class CFB:
                             op=op_data[0],
                             win=op_data[1] == "True",
                             pd=int(op_data[2]),
+                            rh=(op_data[3], op_data[4]),
                             cfb_p=(
-                                int(op_data[3])
-                                if op_data[3].isdigit() or op_data[3].lstrip('-').isdigit()
+                                int(op_data[5])
+                                if op_data[5].isdigit() or op_data[5].lstrip('-').isdigit()
                                 else "AP"
                             ),
-                            conference_champ_game=op_data[4] == "True",
-                            po_octo=op_data[5] == "True",
-                            po_quarter=op_data[6] == "True",
-                            po_semi=op_data[7] == "True",
-                            po_final=op_data[8] == "True",
+                            conference_champ_game=op_data[6] == "True",
+                            po_octo=op_data[7] == "True",
+                            po_quarter=op_data[8] == "True",
+                            po_semi=op_data[9] == "True",
+                            po_final=op_data[10] == "True",
                         )
                     )
                 self.conferences[con].div2[div_team].opponents = opponents
@@ -919,7 +918,7 @@ class CFB:
                 
                 input("")
                 print_reveal(revealed_teams, made_it, out)
-                input("")
+                print("\n")
 
             input("")
             
