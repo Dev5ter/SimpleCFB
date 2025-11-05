@@ -69,7 +69,7 @@ class Team:
 
     def print_team_details(self, show_cfp_points: bool = True):
         rw, rl, urw, url = self.get_ranked_and_unranked_records()
-        print(f"{self.name} ({self.total_wins}-{self.total_losses}) CFP: {self.cfb_points if show_cfp_points else '???'} PD: {self.point_diff} RR: ({rw}-{rl}) URR: ({urw}-{url})")
+        print(f"{self.prev_rank if not show_cfp_points else self.full_rank} {self.name} ({self.total_wins}-{self.total_losses}) CFP: {self.cfb_points if show_cfp_points else '???'} PD: {self.point_diff} RR: ({rw}-{rl}) URR: ({urw}-{url})")
 
         if self.opponents == []:
             return
@@ -535,7 +535,7 @@ class CFB:
             teams[self.octo[i][loser]].opponents.append(OpponentMatch(teams[self.octo[i][winner]], False, scores[1]-scores[0], (teams[self.octo[i][loser]].rank, teams[self.octo[i][winner]].rank), po_octo=True))
             print(f"{teams[self.octo[i][winner]].name} {scores[0]} - {scores[1]} {teams[self.octo[i][loser]].name} | {teams[self.octo[i][winner]].name} wins!!!\n")
 
-            self.menu_processor(allow_save_load=False)
+            self.menu_processor(allow_save_load=False, retry_counter=1)
 
         # Quarter Matches
         for i in range(4):
@@ -556,7 +556,7 @@ class CFB:
 
             print(f"{teams[self.quarter[i][winner]].name} {scores[0]} - {scores[1]} {teams[self.quarter[i][loser]].name} | {teams[self.quarter[i][winner]].name} wins!!!\n")
 
-            self.menu_processor(allow_save_load=False)
+            self.menu_processor(allow_save_load=False, retry_counter=1)
 
         # Semi Matches
         for i in range(2):
@@ -578,7 +578,7 @@ class CFB:
 
             print(f"{teams[self.semi[i][winner]].name} {scores[0]} - {scores[1]} {teams[self.semi[i][loser]].name} | {teams[self.semi[i][winner]].name} wins!!!\n")
 
-            self.menu_processor(allow_save_load=False)
+            self.menu_processor(allow_save_load=False, retry_counter=1)
 
         # The Championship
         input(f"CFB Championship!!! {teams[self.final[0]].rank} {teams[self.final[0]].name} ({teams[self.final[0]].total_wins}-{teams[self.final[0]].total_losses}) vs {teams[self.final[1]].rank} {teams[self.final[1]].name} ({teams[self.final[1]].total_wins}-{teams[self.final[1]].total_losses})")
@@ -611,7 +611,7 @@ class CFB:
         if print_stuff:
             print(f"{winner.name} {scores[0]} - {scores[1]} {loser.name}  | {winner.name} wins!\n")
 
-    def menu_processor(self, allow_save_load: bool = True):
+    def menu_processor(self, allow_save_load: bool = True, retry_counter: int = 3):
         enter_counter = 0
         while True:
             selection_string = (
@@ -651,22 +651,32 @@ class CFB:
                 self.make_cfb_top_25()
                 self.print_top25()
                 print("\n")
-            if selection.lower() == "td":
-                tr = input("Enter the team's rank you want to see: ")
-                if tr.isdigit():
-                    viewing = deepcopy(self.team_ranks)
-                    viewing.sort(key=lambda x: int(x.full_rank))
-                    viewing[int(tr)-1].print_team_details()
-                    print("\n")
+            if selection.lower()[:2] == "td":
+                if len(selection.lower().split(' ')) == 2:
+                    if selection.lower().split(' ')[1].isdigit():
+                        viewing = deepcopy(self.team_ranks)
+                        viewing.sort(key=lambda x: int(x.full_rank))
+                        viewing[int(selection.lower().split(' ')[1])-1].print_team_details()
+                        print("\n")
+                    else:
+                        print("next time enter a digit\n")
+
                 else:
-                    print("next time enter a digit\n")
+                    tr = input("Enter the team's rank you want to see: ")
+                    if tr.isdigit():
+                        viewing = deepcopy(self.team_ranks)
+                        viewing.sort(key=lambda x: int(x.full_rank))
+                        viewing[int(tr)-1].print_team_details()
+                        print("\n")
+                    else:
+                        print("next time enter a digit\n")
 
             if selection == "":
                 enter_counter += 1
             else:
                 enter_counter = 0
                 
-            if selection.lower() == "a" or enter_counter >= 3:
+            if selection.lower() == "a" or enter_counter >= retry_counter:
                 print("\n")
                 return
             
