@@ -3,7 +3,9 @@ from cfb import *
 def main():
     ncaa = CFB()
     ncaa.make_ap_top25()
-    ncaa.menu_processor()
+    ncaa.generate_schedules()
+    ncaa.menu_processor(retry_counter=1)
+
     ncaa.print_top25()
     input("")
     ncaa.print_standings()
@@ -37,7 +39,6 @@ def main():
     input("")
     ncaa.menu_processor(allow_save_load=False)
    
-
 
 if __name__ == "__main__":
     main()
