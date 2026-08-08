@@ -18,8 +18,9 @@ def test_team_handle_win():
     TEAM_NAME = "Tennessee"
     POINTS = 23
     vols = Team(TEAM_NAME)
+    vols.opponents.append(Team("North Carolina"))
 
-    vols.handle_win(23)
+    vols.handle_win(23, week=0, rank_history=[1])
 
     assert vols.reg_wins == 1
     assert vols.total_wins == 1
@@ -33,8 +34,9 @@ def test_team_handle_loss():
     TEAM_NAME = "Tennessee"
     POINTS = 23
     vols = Team(TEAM_NAME)
+    vols.opponents.append(Team("North Carolina"))
 
-    vols.handle_loss(POINTS)
+    vols.handle_loss(POINTS, week=0, rank_history=[1])
 
     assert vols.reg_wins == 0
     assert vols.total_wins == 0
@@ -66,9 +68,9 @@ def test_team_get_ranked_and_unranked_records():
     unc = Team("North Carolina")
     unc.rank = '12'
 
-    vols_p2 = OpponentMatch(unc, True, 21)
-    vols_p = OpponentMatch(clemson, True, 14)
-    clem_p = OpponentMatch(vols, False, -14)
+    vols_p2 = OpponentMatch(unc, True, 21, has_game_happened=True)
+    vols_p = OpponentMatch(clemson, True, 14, has_game_happened=True)
+    clem_p = OpponentMatch(vols, False, -14, has_game_happened=True)
 
     vols.opponents.append(vols_p)
     vols.opponents.append(vols_p2)
