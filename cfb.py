@@ -1,4 +1,5 @@
 from random import choice, randint, shuffle
+from settings import CFBGlobalSettings
 from typing import Union
 from copy import deepcopy
 
@@ -6,6 +7,8 @@ from copy import deepcopy
 class Team:
     def __init__(self, team_name) -> None:
         self.name = team_name
+        self.conference: str = "Unknown"
+        self.division: str = "Unknown"
         self.reg_wins: int = 0
         self.reg_losses: int = 0
         self.total_wins: int = 0
@@ -79,7 +82,7 @@ class Team:
 
     def print_team_details(self, show_cfp_points: bool = True):
         rw, rl, urw, url = self.get_ranked_and_unranked_records()
-        print(f"{self.prev_rank if not show_cfp_points else self.full_rank} {self.name} ({self.total_wins}-{self.total_losses}) CFP: {self.cfb_points if show_cfp_points else '???'} PD: {self.point_diff} RR: ({rw}-{rl}) URR: ({urw}-{url})")
+        print(f"{self.prev_rank if not show_cfp_points else self.full_rank} {self.name} ({self.total_wins}-{self.total_losses}) CFP: {self.cfb_points if show_cfp_points else '???'} PD: {self.point_diff} RR: ({rw}-{rl}) URR: ({urw}-{url}) Conf: {self.conference}-{self.division}")
 
         if self.opponents == []:
             return
@@ -92,24 +95,24 @@ class Team:
 
             if op_match.is_conference_title:
                 print("\n---------------- Conference Championship -----------------------")
-                week_counter = 13
+                week_counter = CFBGlobalSettings.NumOfRegWeeks.value + 1
             if op_match.is_playoff_octo:
                 print("\n------------------ Playoff Octo Round --------------------------")
-                week_counter = 14
+                week_counter = CFBGlobalSettings.NumOfRegWeeks.value + 2
             if op_match.is_playoff_quarter:
                 print("\n---------------- Playoff Quarter Round -------------------------")
-                week_counter = 15
+                week_counter = CFBGlobalSettings.NumOfRegWeeks.value + 3
             if op_match.is_playoff_semi:
                 print("\n----------------- Playoff Semi Round ---------------------------")
-                week_counter = 16
+                week_counter = CFBGlobalSettings.NumOfRegWeeks.value + 4
             if op_match.is_playoff_final:
                 print("\n---------------- Playoff Championship --------------------------")
-                week_counter = 17
+                week_counter = CFBGlobalSettings.NumOfRegWeeks.value + 5
 
             if op_match.has_game_happened:
-                print(f" {week_counter:>3}) {'W' if op_match.win else 'L'} ({op.rank:>2}) {op.name:<{name_length}} ({op.total_wins}-{op.total_losses}) PD: {op_match.point_diff:>3}  RH: ( {op_match.rank_history[0]:>2} - {op_match.rank_history[1]:>2} ) CFB_P: {(op_match.cfb_points if show_cfp_points else '???'):>3}")
+                print(f" {week_counter:>3}) {'W' if op_match.win else 'L'} ({op.rank:>2}) {op.name:<{name_length}} ({op.total_wins}-{op.total_losses}) Conf: {op.conference:^3}  PD: {op_match.point_diff:>3}  RH: ( {op_match.rank_history[0]:>2} - {op_match.rank_history[1]:>2} ) CFB_P: {(op_match.cfb_points if show_cfp_points else '???'):>3}")
             else:
-                print(f" {week_counter:>3}) ? ({op.rank:>2}) {op.name:<{name_length}} ({op.total_wins}-{op.total_losses}) PD:  ??  RH: {'???':^11} CFB_P: {(op_match.cfb_points if show_cfp_points else '???'):>3}")
+                print(f" {week_counter:>3}) ? ({op.rank:>2}) {op.name:<{name_length}} ({op.total_wins}-{op.total_losses}) Conf: {op.conference:^3}  PD:  ??  RH: {'???':^11} CFB_P: {(op_match.cfb_points if show_cfp_points else '???'):>3}")
             
             week_counter += 1
     
@@ -127,20 +130,23 @@ class Team:
             this_point = 0
             if win:
                 if op.rank.isdigit():
-                    this_point += 50 - int(op.rank) + (2 * op.reg_wins) + (pd  // 7) #  pd 3
+                    this_point += ((50 - int(op.rank)) + (2 * op.reg_wins) + (pd  // 7)) #  pd 3
+                    if int(op.rank) <= 15:
+                        this_point += 5
                 else:
-                    this_point += 12 + (2 * op.reg_wins) + (pd // 14) #  pd 7
+                    this_point += 14 + (2 * op.reg_wins) + (pd // 10) #  pd 7
             else:
+                # pd for loss is negative
                 if op.rank.isdigit():
-                    this_point -= (int(op.rank) + 15 - (pd // 9)) #  pd 7
+                    this_point -= (int(op.rank) + 20 + (-pd // 10)) #  pd 7 
                 else:
-                    this_point -= ((int(op.full_rank) // 2) + 25 + op.reg_losses - (pd // 5))
+                    this_point -= ((int(op.full_rank) // 2) + 25 + (op.reg_losses*2) + (-pd // 7))
             
             op_match.cfb_points = this_point
 
             points += this_point
 
-        self.cfb_points = points + 50
+        self.cfb_points = points + 100
         return points
 
     def get_all_cur_reg_season_opp(self):
@@ -168,6 +174,16 @@ class Conference:
         self.div2: list[Team] = t2
         self.div1_name: str = dn1
         self.div2_name: str = dn2
+
+        for t in t1:
+            t: Team
+            t.conference = n
+            t.division = dn1
+
+        for t in t2:
+            t: Team
+            t.conference = n
+            t.division = dn2
 
 
 class CFB:
@@ -212,7 +228,7 @@ class CFB:
         acc_co.append(Team("Virginia"))
         acc_co.append(Team("Virginia Tech"))
 
-        cons.append(Conference("ACC", acc_at, acc_co, "Atlantic", "Costal"))
+        cons.append(Conference("ACC", acc_at, acc_co, "Atlantic", "Coastal"))
 
         big10_east = []
         big10_east.append(Team("Michigan"))
@@ -232,7 +248,7 @@ class CFB:
         big10_west.append(Team("Nebraska"))
         big10_west.append(Team("Northwestern"))
 
-        cons.append(Conference("Big 10", big10_east, big10_west, "East", "West"))
+        cons.append(Conference("B10", big10_east, big10_west, "East", "West"))
 
         tot_east = []
         tot_east.append(Team("TCU"))
@@ -254,6 +270,26 @@ class CFB:
 
         cons.append(Conference("OCT", tot_east, tot_west, "East", "West"))
 
+        pac_east = []
+        pac_east.append(Team("Kent State"))
+        pac_east.append(Team("Washington"))
+        pac_east.append(Team("Toledo"))
+        pac_east.append(Team("Memphis"))
+        pac_east.append(Team("Cincinnati"))
+        pac_east.append(Team("Utah"))
+        pac_east.append(Team("Stanford"))
+
+        pac_west = []
+        pac_west.append(Team("Sam Houston"))
+        pac_west.append(Team("Texas Tech"))
+        pac_west.append(Team("Southern Cali"))
+        pac_west.append(Team("Temple"))
+        pac_west.append(Team("Akron"))
+        pac_west.append(Team("BYU"))
+        pac_west.append(Team("Tulane"))
+
+        cons.append(Conference("PAC", pac_east, pac_west, "East", "West"))
+
         fbs_east = []
         fbs_east.append(Team("Gardner Webb"))
         fbs_east.append(Team("Marshall"))
@@ -261,20 +297,21 @@ class CFB:
         fbs_east.append(Team("UT Martin"))
         fbs_east.append(Team("East Carolina"))
         fbs_east.append(Team("Tulsa"))
-        fbs_east.append(Team("BYU"))
+        fbs_east.append(Team("Campbell"))
 
         fbs_west = []
         fbs_west.append(Team("Army"))
         fbs_west.append(Team("Air Force"))
-        fbs_west.append(Team("Tulane"))
+        fbs_west.append(Team("Georgetown"))
         fbs_west.append(Team("Navy"))
         fbs_west.append(Team("James Madison"))
         fbs_west.append(Team("Troy"))
         fbs_west.append(Team("Uconn"))
 
-        cons.append(Conference("FBS", fbs_east, fbs_west, "East", "West"))
+        cons.append(Conference("FCS", fbs_east, fbs_west, "East", "West"))
 
         return cons
+
 
     def __init__(self):
         self.conferences: list[Conference] = self.set_up_season()
@@ -314,6 +351,26 @@ class CFB:
             [],
             [],
         ]
+        self.CONFERENCE_CYCLE = [
+            (1, ((2,3), (4,5), (6,7))), # 1
+            (2, ((1,5), (3,7), (4,6))), # 2
+            (3, ((1,6), (2,5), (4,7))), # 3
+            (4, ((1,7), (2,6), (3,5))), # 4
+            (5, ((1,4), (2,7), (3,6))), # 5
+            (6, ((1,3), (2,4), (5,7))), # 6
+            (7, ((1,2), (3,4), (5,6))), # 7
+        ]
+        shuffle(self.CONFERENCE_CYCLE)
+
+        self.OPP_CONF_CYCLE = [
+            ((1,2), (3,4), (5,6)),
+            ((1,3), (2,5), (4,6)),
+            ((1,4), (2,6), (3,5)),
+            ((1,5), (2,4), (3,6)),
+            ((1,6), (2,3), (4,5)),
+        ]
+        shuffle(self.OPP_CONF_CYCLE)
+
         self.final = []
         self.winner: Team = None
         self.SEASON_FOLDER = "saved_seasons"
@@ -322,50 +379,116 @@ class CFB:
         """
         Current Mode Ideas
         0: Pure Random w/o duplicates (V7 Default)
-        1: Every Half Conference (6) + 2 Conf + 4 Non-Conf (V8 Option)
+        1: Every Half Conference (6) + 1 Conf + 5 Non-Conf (V8 Option)
         """
+
+        is_conf_week_pool = (
+            [False, False, True, True, False, True, True, False, True, True, False, True]
+            if CFBGlobalSettings.isConferenceOppOn.value
+            else [False] * CFBGlobalSettings.NumOfRegWeeks.value
+        )
+
+        while len(is_conf_week_pool) < CFBGlobalSettings.NumOfRegWeeks.value:
+            is_conf_week_pool.append(False)
+
+        if len(is_conf_week_pool) > CFBGlobalSettings.NumOfRegWeeks.value:
+            is_conf_week_pool = is_conf_week_pool[:CFBGlobalSettings.NumOfRegWeeks.value]
+
         while True:
-            Locked = False
-            potential_pairings = []
             all_teams = self.get_all_teams()
 
-            if len(all_teams[0].opponents) == 12: # V8 Week Amount
+            if len(all_teams[0].opponents) == CFBGlobalSettings.NumOfRegWeeks.value: # V8 Week Amount
                 break
 
-            for _ in range(len(all_teams)//2):
-                home: Team = choice(all_teams)
-                all_teams.remove(home)
+            is_conf_week = is_conf_week_pool.pop(0)
 
-                away = choice(all_teams)
+            if is_conf_week:
+                counter = 7 - is_conf_week_pool.count(True)
+                self._get_conf_week_matchups(self.CONFERENCE_CYCLE[counter-1][1], self.CONFERENCE_CYCLE[counter-1][0])
+            elif CFBGlobalSettings.NumOfConferences.value == 6 and CFBGlobalSettings.isConferenceOppOn.value and CFBGlobalSettings.NonConfWeeksHaveUniqueConf.value:
+                counter = 5 - is_conf_week_pool.count(False)
+                self._get_unique_conf_matchup(self.OPP_CONF_CYCLE[counter-1])
+            else:
+                result = self._get_reg_week_matchup(all_teams)
+                if result == -1:
+                    is_conf_week_pool.insert(0, False)
 
-                ac = 0
-                while away.name in home.get_all_cur_reg_season_opp():
-                    away = choice(all_teams)
-                    ac += 1
-                    if ac > 10:
-                        #print(f"Dup found: {home.name} vs {away.name}! Locking and Retrying")
-                        Locked = True
-                        break
-                all_teams.remove(away)
 
-                potential_pairings.append((home, away))
+    def _setup_matchup(self, home: Team, away: Team):
+        """ Takes 2 teams and adds them to OpponentMatch """
+        home.opponents.append(OpponentMatch(away))
+        away.opponents.append(OpponentMatch(home))
+
+
+    def _get_unique_conf_matchup(self, conf_order):
+        for conf_pair in conf_order:
+            con_1 = self.conferences[conf_pair[0]-1]
+            con_1_teams = self.get_all_teams(True, con_1.name)
+            con_2 = self.conferences[conf_pair[1]-1]
+            con_2_teams = self.get_all_teams(True, con_2.name)
             
-            if not Locked:
-                for pairing in potential_pairings:
-                    pairing[0].opponents.append(OpponentMatch(pairing[1]))
-                    pairing[1].opponents.append(OpponentMatch(pairing[0]))
+            for index in range(len(con_1_teams)):
+                self._setup_matchup(con_1_teams[index], con_2_teams[index])
+
+
+    def _get_conf_week_matchups(self, conf_order, counter):
+        # conf_order example: ((1,2), (3,4), (5,6)),
+        if counter != 8:
+            for con in self.conferences:
+                # Do the three reg SHUFFLE HOME/AWAY future
+
+                for i in range(3):
+                    self._setup_matchup(con.div1[conf_order[i][0]-1], con.div1[conf_order[i][1]-1])
+                    self._setup_matchup(con.div2[conf_order[i][0]-1], con.div2[conf_order[i][1]-1])
+
+                self._setup_matchup(con.div1[counter-1], con.div2[counter-1])
+
+
+    def _get_reg_week_matchup(self, all_teams):
+        Locked = False
+        potential_pairings = []
+        for _ in range(len(all_teams)//2):
+            home: Team = choice(all_teams)
+            all_teams.remove(home)
+
+            possible_away_options = [x for x in all_teams if x.conference != home.conference]
+
+            if len(possible_away_options) == 0:
+                return -1
+
+            away = choice(possible_away_options)
+
+            ac = 0
+            while away.name in home.get_all_cur_reg_season_opp():
+                away = choice(all_teams)
+                ac += 1
+                if ac > 10:
+                    #print(f"Dup found: {home.name} vs {away.name}! Locking and Retrying")
+                    Locked = True
+                    return -1
+            all_teams.remove(away)
+
+            potential_pairings.append((home, away))
         
+        if not Locked:
+            for pairing in potential_pairings:
+                self._setup_matchup(pairing[0], pairing[1])
+
 
     def get_scores(self):
         loser = randint(0,52)
         if loser == 1:
             loser = 7
-        winner = randint(loser+1, 80+randint(0,9))
+        winner = randint(loser+1, 80)
         return (winner, loser)
-    
-    def get_all_teams(self, shuffled: bool = False) -> list[Team]:
+
+
+    def get_all_teams(self, shuffled: bool = False, must_be_conf: str = None) -> list[Team]:
         teams = []
         for con in self.conferences:
+            if must_be_conf is not None and con.name != must_be_conf:
+                continue
+
             for team in con.div1:
                 teams.append(team)
             for team in con.div2:
@@ -374,9 +497,10 @@ class CFB:
             shuffle(teams)
         return teams
 
-    def play_week(self, print_stuff=True):
-        teams = self.get_all_teams(shuffled=True)
 
+    def get_this_week_matchups_sorted(self):
+        teams = self.get_all_teams(shuffled=True)
+        
         matches: list[list[Team]] = []
 
         for _ in range(len(teams) // 2):
@@ -390,36 +514,55 @@ class CFB:
             matches.append([home, away])
 
         matches.sort(key=self.sort_prime_time, reverse=True)
+        return matches
+
+
+    def play_week(self, print_stuff=True):
+        matches = self.get_this_week_matchups_sorted()
 
         for i in range(len(matches)):
             home = matches[i][0]
             away = matches[i][1]
+            
             if print_stuff:
-                if i == (len(matches)-1):
+                game_of_week: bool = i == (len(matches)-1)
+                self._print_matchup(matches[i], game_of_week)
+
+            winner, loser = (
+                self.determine_winner_ap(home, away) 
+                if self.week < CFBGlobalSettings.WeekCFBStartsRanking.value 
+                else self.determine_winner_cfb(home, away)
+            )
+            scores = self.get_scores()
+            self.handle_regular_game(winner, loser, scores, print_stuff)
+
+
+    def _print_matchup(self, match, game_of_week=False, print_stuff=True):
+            home = match[0]
+            away = match[1]
+            if print_stuff:
+                if game_of_week:
                     print("NCAA GAME OF THE WEEK!!!")
                 input(f"Match-up: {away.rank} {away.name} ({away.reg_wins}-{away.reg_losses}) @ {home.rank} {home.name} ({home.reg_wins}-{home.reg_losses})")
 
-            winner, loser = self.determine_winner_ap(home, away) if self.week < 7 else self.determine_winner_cfb(home, away)
-            scores = self.get_scores()
-            self.handle_regular_game(winner, loser, scores, print_stuff)
 
     def sort_prime_time(self, game):
         #print(type(game), len(game), game)
         viewers: int = 0
         if game[0].rank == "UR":
-            viewers += (26+game[0].total_losses)
+            viewers += (CFBGlobalSettings.NumOfTeamsRanked.value+1+game[0].total_losses)
         else:
             viewers += int(game[0].rank)
 
         if game[1].rank == "UR":
-            viewers += (26+game[1].total_losses)
+            viewers += (CFBGlobalSettings.NumOfTeamsRanked.value+1+game[1].total_losses)
         else:
             viewers += int(game[1].rank)
         return viewers
 
     def ranking(self, tea):
         if tea.rank == "UR":
-            return 26 + tea.total_losses
+            return CFBGlobalSettings.NumOfTeamsRanked.value + 1 + tea.total_losses
         else:
             return int(tea.rank)
 
@@ -431,7 +574,7 @@ class CFB:
             print(f"{(con.name):^93}")
             print(f"{(con.div1_name):^46}{(con.div2_name):^46}")
             print("---------------------------------------------------------------------------------------------")
-            for tea in range(7):
+            for tea in range(CFBGlobalSettings.TeamsPerDivision.value):
                 print(f"{(con.div1[tea].rank):>2} ({(con.div1[tea].prev_rank):>2}) {(con.div1[tea].name):<20} ({(con.div1[tea].total_wins):<2} - {(con.div1[tea].total_losses):>2}) ({(con.div1[tea].point_diff if self.rank_sig=='AP' else con.div1[tea].cfb_points):>4}) | {(con.div2[tea].rank):>2} ({(con.div2[tea].prev_rank):>2}) {(con.div2[tea].name):<20} ({(con.div2[tea].reg_wins):<2} - {(con.div2[tea].reg_losses):>2}) ({(con.div2[tea].point_diff if self.rank_sig=='AP' else con.div2[tea].cfb_points):>4})")
 
             input("")
@@ -439,11 +582,11 @@ class CFB:
     def print_top25(self):
         self.team_ranks.sort(key=lambda x: int(x.full_rank))
         print("-----------------------------------------------------")
-        print("{0:^54}".format(f"{self.rank_sig} Top 25"))
+        print("{0:^54}".format(f"{self.rank_sig} Top {CFBGlobalSettings.NumOfTeamsRanked.value}"))
         print("-----------------------------------------------------")
         print(f"Rk (+/-) |         Name         | Record | {'Point_Diff' if self.rank_sig=='AP' else 'CFB Points'}")
         print("-----------------------------------------------------")
-        for i in range(25):
+        for i in range(CFBGlobalSettings.NumOfTeamsRanked.value):
             print(f"{(1+i):>2} ({(self.team_ranks[i].get_rank_difference()):>3}) | {(self.team_ranks[i].name):<20} | {(self.team_ranks[i].total_wins):>2} -{(self.team_ranks[i].total_losses):>2} | {(self.team_ranks[i].point_diff if self.rank_sig == 'AP' else self.team_ranks[i].cfb_points):>6}")
         print("")
 
@@ -454,9 +597,10 @@ class CFB:
         for t in range(len(self.team_ranks)):
             self.team_ranks[t].prev_rank = self.team_ranks[t].rank
             self.team_ranks[t].full_rank = str(t+1)
-            self.team_ranks[t].rank = str(t+1) if t < 25 else "UR"
+            self.team_ranks[t].rank = str(t+1) if t < CFBGlobalSettings.NumOfTeamsRanked.value else "UR"
 
         self.rank_sig = "AP"
+
     
     def make_cfb_top_25(self):
         self.team_ranks = self.get_all_teams(shuffled=True)
@@ -465,7 +609,7 @@ class CFB:
         for t in range(len(self.team_ranks)):
             self.team_ranks[t].prev_rank = self.team_ranks[t].rank
             self.team_ranks[t].full_rank = str(t+1)
-            self.team_ranks[t].rank = str(t+1) if t < 25 else "UR"
+            self.team_ranks[t].rank = str(t+1) if t < CFBGlobalSettings.NumOfTeamsRanked.value else "UR"
 
         self.team_ranks.sort(key = lambda x: (x.calc_cfb_points(), x.total_wins, x.point_diff, x.prev_rank), reverse=True)
 
@@ -473,7 +617,7 @@ class CFB:
             not_moved: bool = True
             for i in range(len(self.team_ranks)-1):
                 for op_match in self.team_ranks[i].opponents[::-1]:
-                    if not op_match.win and self.team_ranks[i+1] == op_match.opponent:
+                    if op_match.has_game_happened and not op_match.win and self.team_ranks[i+1] == op_match.opponent:
                         # print(f"SWITCH: {self.team_ranks[i].name}")
                         temp: OpponentMatch = self.team_ranks[i+1]
                         self.team_ranks[i+1] = self.team_ranks[i]
@@ -485,9 +629,10 @@ class CFB:
 
         for t in range(len(self.team_ranks)):
             self.team_ranks[t].full_rank = str(t+1)
-            self.team_ranks[t].rank = str(t+1) if t < 25 else "UR"
+            self.team_ranks[t].rank = str(t+1) if t < CFBGlobalSettings.NumOfTeamsRanked.value else "UR"
 
         self.rank_sig = "CFB"
+
 
     def conference_championships(self):
         for con in self.conferences:
@@ -677,8 +822,9 @@ class CFB:
         enter_counter = 0
         while True:
             selection_string = (
-                " (FR): See Full Rankings | (A): Advance Week | (B): Show Bracket\n"
-                " (TD): Team Details | (ST): Show Top 25 | (SC): Show Confrences\n"
+                " (FR): See Full Rankings | (A): Advance Week | (B): Show Bracket | (GW): Games of Week\n"
+                f" (TD): Team Details | (ST): Show Top {CFBGlobalSettings.NumOfTeamsRanked.value} | (SC): Show Confrences | (RR): ReRank Teams\n"
+                # " (RR): ReRank Teams CFP | (GW): Show Top Matchup\n"
             )
             if allow_save_load:
                 selection_string += (
@@ -713,19 +859,28 @@ class CFB:
                 self.make_cfb_top_25()
                 self.print_top25()
                 print("\n")
+            if selection.lower() == "gw":
+                top3_matches = self.get_this_week_matchups_sorted()[-3:][::-1]
+                for i in range(3):
+                    game_of_week: bool = i == 0
+                    self._print_matchup(top3_matches[i], game_of_week)
+                    print("\n")
+                print("\n")
             if selection.lower()[:2] == "td":
-                if len(selection.lower().split(' ')) == 2:
-                    if selection.lower().split(' ')[1].isdigit():
-                        viewing = deepcopy(self.team_ranks)
-                        viewing.sort(key=lambda x: int(x.full_rank))
-                        viewing[int(selection.lower().split(' ')[1])-1].print_team_details()
-                        print("\n")
-                    else:
-                        print("next time enter a digit\n")
+                td_split = selection.lower().split(' ')
+                if len(td_split) > 1:
+                    for t in range(1, len(td_split)):
+                        if td_split[t].isdigit() and int(td_split[t]) <= 100:
+                            viewing = deepcopy(self.team_ranks)
+                            viewing.sort(key=lambda x: int(x.full_rank))
+                            viewing[int(td_split[t])-1].print_team_details()
+                            print("\n")
+                        else:
+                            print("next time enter a digit\n")
 
                 else:
                     tr = input("Enter the team's rank you want to see: ")
-                    if tr.isdigit():
+                    if tr.isdigit() and int(tr) <= (CFBGlobalSettings.NumOfConferences.value * CFBGlobalSettings.TeamsPerDivision.value * 2):
                         viewing = deepcopy(self.team_ranks)
                         viewing.sort(key=lambda x: int(x.full_rank))
                         viewing[int(tr)-1].print_team_details()
@@ -741,7 +896,8 @@ class CFB:
             if selection.lower() == "a" or enter_counter >= retry_counter:
                 print("\n")
                 return
-            
+
+
     def determine_winner_ap(self, home: Team, away: Team):
         box = home.reg_wins - away.reg_wins
         if box < 0:
@@ -755,6 +911,7 @@ class CFB:
             return (home, away)
         return (away, home)
 
+
     def determine_winner_cfb(self, home: Team, away: Team):
         pd = int(home.full_rank) - int(away.full_rank)
         odds = randint(1,100)
@@ -765,12 +922,11 @@ class CFB:
 
         while odds == line:
             odds = randint(1,100)
-
-        # print("DW_CFB: ", home.name, away.name, " ODDS: ", odds, " LINES: ", line)
         
         if odds < line:
             return (home, away)
         return (away, home)
+
 
     def save_season(self):
         file_name = input("Enter name of save file: ")
@@ -798,6 +954,8 @@ class CFB:
                     file.write(f"{op.opponent.name},{op.win},{op.point_diff},{op.rank_history[0]},{op.rank_history[1]},{op.cfb_points},{op.is_conference_title},{op.is_playoff_octo},{op.is_playoff_quarter},{op.is_playoff_semi},{op.is_playoff_final},{op.has_game_happened},\n")
 
         file.close()
+        print(f"Saved season to {filepath}")
+
 
     def load_season(self):
         file_name = input("Enter name of load file: ")
@@ -809,10 +967,10 @@ class CFB:
         self.week = int(conf_data[0])
         self.rank_sig = conf_data[1]
 
-        for con in range(5):
+        for con in range(CFBGlobalSettings.NumOfConferences.value):
             self.conferences[con].name = file.readline()[:-1]
             self.conferences[con].div1_name = file.readline()[:-1]
-            for div_team in range(7):
+            for div_team in range(CFBGlobalSettings.TeamsPerDivision.value):
                 team_data = file.readline().split(',')[:-1]
                 self.conferences[con].div1[div_team].name = team_data[0]
                 self.conferences[con].div1[div_team].reg_wins = int(team_data[1])
@@ -826,7 +984,7 @@ class CFB:
                 self.conferences[con].div1[div_team].cfb_points = int(team_data[9])
 
                 opponents = []
-                for _ in range(12):
+                for _ in range(CFBGlobalSettings.NumOfRegWeeks.value):
                     op_data = file.readline().split(',')[:-1]
                     opponents.append(
                         OpponentMatch(
@@ -850,7 +1008,7 @@ class CFB:
                 self.conferences[con].div1[div_team].opponents = opponents
 
             self.conferences[con].div2_name = file.readline()[:-1]
-            for div_team in range(7):
+            for div_team in range(CFBGlobalSettings.TeamsPerDivision.value):
                 team_data = file.readline().split(',')[:-1]
                 self.conferences[con].div2[div_team].name = team_data[0]
                 self.conferences[con].div2[div_team].reg_wins = int(team_data[1])
@@ -864,7 +1022,7 @@ class CFB:
                 self.conferences[con].div2[div_team].cfb_points = int(team_data[9])
 
                 opponents = []
-                for _ in range(12):
+                for _ in range(CFBGlobalSettings.NumOfRegWeeks.value):
                     op_data = file.readline().split(',')[:-1]
                     opponents.append(
                         OpponentMatch(
@@ -915,9 +1073,21 @@ class CFB:
         cfp_teams = []
         limit = 14 if get_first_two_out else 12
 
-        if self.is_after_conference_championship: 
-            self.team_ranks.sort(key=lambda x: (not x.is_con_champion, int(x.full_rank)))
-            cfp_teams = self.team_ranks[:limit]
+        if self.is_after_conference_championship:
+            if CFBGlobalSettings.AllConfChampInPlayoff.value:
+                self.team_ranks.sort(key=lambda x: (not x.is_con_champion, int(x.full_rank)))
+                cfp_teams = self.team_ranks[:limit]
+            else:
+                self.team_ranks.sort(key=lambda x: (not x.is_con_champion, int(x.full_rank)))
+                cfp_teams = self.team_ranks[:CFBGlobalSettings.NumOfConfChampInPlayoff.value]
+                self.team_ranks.sort(key=lambda x: int(x.full_rank))
+                index = 0
+                while len(cfp_teams) < limit:
+                    if self.team_ranks[index] not in cfp_teams:
+                        cfp_teams.append(self.team_ranks[index])
+    
+                    index += 1
+            
         else:
             for con in self.conferences:
                 teams = []
@@ -950,14 +1120,14 @@ class CFB:
     def cfp_teams_reveal(self):
 
         def print_reveal(teams: list[Team], other_made_it, outs):
-            print("--------------------------------------------")
-            print("| Sd  | Rk  |       Name        |  Record  |")
-            print("--------------------------------------------")
+            print("-----------------------------------------------------")
+            print("| Sd  | Rk  |       Name        |  Conf  |  Record  |")
+            print("-----------------------------------------------------")
             for i in range(1, 13):
                 team = next((x for x in teams if x.cfp_seed == i), None)
-                print(f"| {i:>2}) | {(team.full_rank if team else ' '):>2}) | {(team.name if team else ' '):^17} | {(f'({team.total_wins:>2} - {team.total_losses:>2})' if team else ' '):<8}")
+                print(f"| {i:>2}) | {(team.full_rank if team else ' '):>2}) | {(team.name if team else ' '):^17} |  {(team.conference if team else ' '):^4}{('*' if team and team.is_con_champion else ' ')} | {(f'({team.total_wins:>2} - {team.total_losses:>2})' if team else ' '):<8}")
             
-            print("\n\n-----------------")
+            print("\n\n--------------------")
             print(f"First Out: {outs[0].name if len(teams)==12 else ' '}")
             print(f"Second Out: {outs[1].name if len(teams)==12 else ' '}")
             
@@ -972,6 +1142,14 @@ class CFB:
         cfp_teams = self.get_cfp_12_teams(get_first_two_out=True)
         made_it = cfp_teams[:12]
         made_it.sort(key=lambda x: (not x.is_con_champion, int(x.full_rank)))
+
+        if not CFBGlobalSettings.AllConfChampInPlayoff.value:
+            temp = made_it[:CFBGlobalSettings.NumOfConfChampInPlayoff.value]
+            temp2 = made_it[CFBGlobalSettings.NumOfConfChampInPlayoff.value:]
+            temp2.sort(key=lambda x: int(x.full_rank))
+            temp.extend(temp2)
+            made_it = temp
+
         out = cfp_teams[-2:]
 
         revealed_teams = []
@@ -1071,4 +1249,49 @@ class CFB:
             f"~                                                                                       \n"
             f"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
         )
+
+    
+    def main_game_loop(self):
+        self.make_ap_top25()
+        self.generate_schedules()
+        self.menu_processor(retry_counter=1)
+    
+        self.print_top25()
+        input("")
+        self.print_standings()
+        self.menu_processor()
+    
+        while self.week <= CFBGlobalSettings.NumOfRegWeeks.value:
+            self.play_week(print_stuff=True)
+            input("")
+            self.menu_processor(retry_counter=1, allow_save_load=False)
+            if self.week < CFBGlobalSettings.WeekCFBStartsRanking.value:
+                self.make_ap_top25()
+            else:
+                self.make_cfb_top_25()
+            self.print_top25()
+            input("")
+            self.print_standings()
+            input("")
+            self.week += 1
+            self.menu_processor()
+    
+        self.conference_championships()
+        self.menu_processor(allow_save_load=False)
+    
+        self.make_cfb_top_25()
+    
+        if CFBGlobalSettings.isTwelveTeamPlayoff.value:
+            self.cfp_teams_reveal()
+            self.print_top25()
+            self.menu_processor(allow_save_load=False)
+            input("")
+            self.playoffs_twelve()
+        else:
+            self.print_top25()
+            self.menu_processor(allow_save_load=False)
+            self.playoffs_four()
+    
+        input("")
+        self.menu_processor(allow_save_load=False)
         
