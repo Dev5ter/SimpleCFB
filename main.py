@@ -1,5 +1,5 @@
-from cfb import *
-from settings import CFBGlobalSettings
+from src.cfb import CFB
+
 
 def main():
     ncaa = CFB()

@@ -1,6 +1,6 @@
 import pytest
 
-from cfb import Team, OpponentMatch
+from src.cfb import Team, OpponentMatch
 
 def test_team_constructor():
     TEAM_NAME = "Tennessee"
