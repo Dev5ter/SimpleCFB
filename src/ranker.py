@@ -21,6 +21,10 @@ class Ranker(ABC):
         pass
 
     @abstractmethod
+    def calc_teams_score(self, team: Team) -> int:
+        pass
+
+    @abstractmethod
     def rank_teams(self):
         pass
 
@@ -36,6 +40,7 @@ class APRanker(Ranker):
     def __init__(self, cfb: CFB):
         super().__init__(cfb, "AP")
         self.weights = {
+            0:  randint(1,2),
             1:  randint(8,12),
             2:  randint(18,22),
             3:  randint(30,34),
@@ -65,9 +70,12 @@ class APRanker(Ranker):
             return (home, away)
         return (away, home)
 
+    def calc_teams_score(self, team):
+        return team.reg_wins + (team.point_diff/(self.weights[self.cfb.week-1]))
+
     def rank_teams(self):
         self.cfb.team_ranks = self.cfb.get_all_teams(shuffled=True)
-        self.cfb.team_ranks.sort(key = lambda x: (x.reg_wins + (x.point_diff/(self.weights[self.cfb.week]))), reverse=True)
+        self.cfb.team_ranks.sort(key = lambda x: self.calc_teams_score(x), reverse=True)
 
         self.label_top_teams()
 
@@ -94,13 +102,47 @@ class CFBRanker(Ranker):
         return (away, home)
 
 
+    def calc_teams_score(self, team: Team):
+        points = 0
+
+        for op_match in team.opponents:
+            if op_match.has_game_happened is False:
+                continue
+
+            win = op_match.win
+            pd = op_match.point_diff
+            op = op_match.opponent
+
+            this_point = 0
+            if win:
+                if op.rank.isdigit():
+                    this_point += ((50 - int(op.rank)) + (2 * op.reg_wins) + (pd  // 7)) #  pd 3
+                    if int(op.rank) <= 15:
+                        this_point += 5
+                else:
+                    this_point += 14 + (2 * op.reg_wins) + (pd // 10) #  pd 7
+            else:
+                # pd for loss is negative
+                if op.rank.isdigit():
+                    this_point -= (int(op.rank) + 20 + (-pd // 10)) #  pd 7 
+                else:
+                    this_point -= ((int(op.full_rank) // 2) + 25 + (op.reg_losses*2) + (-pd // 7))
+            
+            op_match.cfb_points = this_point
+
+            points += this_point
+
+        team.cfb_points = points + 100
+        return points
+
+
     def rank_teams(self):
         self.cfb.team_ranks = self.cfb.get_all_teams(shuffled=True)
-        self.cfb.team_ranks.sort(key = lambda x: x.calc_cfb_points(), reverse=True)
+        self.cfb.team_ranks.sort(key = lambda x: self.calc_teams_score(x), reverse=True)
 
         self.label_top_teams()
 
-        self.cfb.team_ranks.sort(key = lambda x: (x.calc_cfb_points(), x.total_wins, x.point_diff, x.prev_rank), reverse=True)
+        self.cfb.team_ranks.sort(key = lambda x: (self.calc_teams_score(x), x.total_wins, x.point_diff, x.prev_rank), reverse=True)
 
         for repeat_checks in range(25):
             not_moved: bool = True
@@ -123,14 +165,17 @@ class CFBRanker(Ranker):
 
 class RandomRanker(Ranker):
     def __init__(self, cfb):
-        super().__init__(cfb, "RNG")
+        super().__init__(cfb, "RTS")
 
     def determine_winner(self, home: Team, away: Team):
         tmp = [home, away]
         shuffle(tmp)
         return tuple(tmp)
 
+    def calc_teams_score(self, team):
+        pass
+
     def rank_teams(self):
-        shuffle(self.cfb.team_ranks)
+        self.cfb.team_ranks = self.cfb.get_all_teams(shuffled=True)
         self.label_top_teams()
         self.cfb.rank_sig = self.rank_sig
